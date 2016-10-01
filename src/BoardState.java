@@ -12,12 +12,14 @@ import java.util.*;
  * @author ANKIT
  */
 public class BoardState {
-    //int player;
+    int player_me;
+    int player_opp;
     int size;
     int time;//in sec
     HashMap<Integer, ArrayList<BoardUnit>> board = new HashMap<Integer, ArrayList<BoardUnit>>();
-    BoardState(int size, int time){
-        //this.player = player;
+    BoardState(int player_me, int player_opp, int size, int time){
+        this.player_me = player_me;
+        this.player_opp = player_opp;
         this.size = size;
         this.time = time;
         this.board = new HashMap<Integer, ArrayList<BoardUnit>>();
@@ -48,6 +50,138 @@ public class BoardState {
             System.out.println(res);
         }
     }
+    
+    int[] getOwnedSquares(){//returns number of squares owned by me and that by opponent in an array [p_me,p_opp]
+        int [] result = new int[2];
+        int p_me=0;
+        int p_opp = 0;
+        for(int i =0; i<size; i++){
+            for(int j =1; j<=size; j++){
+                ArrayList<BoardUnit> entry = board.get(size*i +j);
+                if(!entry.isEmpty()){
+                    int player = entry.get(entry.size() -1).color;
+                    if(player == player_me){
+                        p_me++;
+                    }
+                    if(player == player_opp){
+                        p_opp++;
+                    }
+                }
+            }
+        }
+        result[0]=p_me;
+        result[1] = p_opp;
+        return result;
+    }
+    
+    int[] getStackHeight(){
+        int[] result = new int[2];
+        int p_me=0;
+        int p_opp = 0;
+        for(int i =0; i<size; i++){
+            for(int j =1; j<=size; j++){
+                ArrayList<BoardUnit> entry = board.get(size*i +j);
+                int entry_size = entry.size();
+                if(!entry.isEmpty()){
+                    int player = entry.get(entry_size -1).color;
+                    if(player == player_me){
+                        p_me+=entry_size;
+                    }
+                    if(player == player_opp){
+                        p_opp+=entry_size;
+                    }
+                }
+            }
+        }
+        result[0]=p_me;
+        result[1] = p_opp;
+        return result;
+    }
+    
+    int[] getMaxChainLength(){//returns the length of the maximum length chain of mine and opp's
+        int[] result = new int[2];
+        int max_me=0,cur_me=0,max_opp=0,cur_opp=0;
+        for(int i =0; i<size; i++){
+            for(int j =1; j<=size; j++){
+                ArrayList<BoardUnit> entry = board.get(size*i +j);
+                int entry_size = entry.size();
+                if(entry.isEmpty()){
+                    cur_me=0;
+                    cur_opp=0;
+                }
+                else{
+                    int player = entry.get(entry_size -1).color;
+                    if(player == player_me){
+                        cur_me++;
+                        cur_opp=0;
+                        if(cur_me>max_me){
+                            max_me=cur_me;
+                        }
+                    }
+                    if(player == player_opp){
+                        cur_opp++;
+                        cur_me=0;
+                        if(cur_opp>max_opp){
+                            max_opp=cur_opp;
+                        }
+                    }
+                }
+            }
+        }
+        for(int i =1; i<=size; i++){
+            for(int j =0; j<size; j++){
+                ArrayList<BoardUnit> entry = board.get(size*j +i);
+                int entry_size = entry.size();
+                if(entry.isEmpty()){
+                    cur_me=0;
+                    cur_opp=0;
+                }
+                else{
+                    int player = entry.get(entry_size -1).color;
+                    if(player == player_me){
+                        cur_me++;
+                        cur_opp=0;
+                        if(cur_me>max_me){
+                            max_me=cur_me;
+                        }
+                    }
+                    if(player == player_opp){
+                        cur_opp++;
+                        cur_me=0;
+                        if(cur_opp>max_opp){
+                            max_opp=cur_opp;
+                        }
+                    }
+                }
+            }
+        }
+        result[0]=max_me;
+        result[1] = max_opp;
+        return result;
+    }
+    
+    BoardState afterPlacing(int player,int kind, char posn_alphabet, int posn_numeric){
+        BoardState result = new BoardState(player_me,player_opp,size,time);
+        for(int i=1; i<=size*size; i++){
+            result.board.put(i,new ArrayList<BoardUnit>(this.board.get(i)));
+        }
+        int position = (((int)posn_alphabet)-97)*size + posn_numeric;
+        if(!result.board.get(position).isEmpty()){
+            return null;
+        }
+        else{
+            result.addPiece(position, new BoardUnit(player,kind));
+        }
+        return result;
+    }
+    
+    int[] getEvaluation(){
+        int[] result = new int[2];
+        result[0]=(this.getStackHeight()[0]+this.getOwnedSquares()[0]+this.getMaxChainLength()[0]);
+        result[1]=(this.getStackHeight()[1]+this.getOwnedSquares()[1]+this.getMaxChainLength()[1]);
+        return result;
+    }
+    
     public static void main(String args[]) throws IOException{
         InputStreamReader isr = new InputStreamReader(System.in);
         Scanner sc = new Scanner(isr);
@@ -57,10 +191,30 @@ public class BoardState {
         int time = sc.nextInt();
         //sc.close();
         System.out.println("player_me = "+player_me+", player_opp = "+player_opp+", size = "+size+", time = "+time);
-        BoardState bs = new BoardState(size,time);
+        BoardState bs = new BoardState(player_me,player_opp,size,time);
         BufferedReader br = new BufferedReader(isr);
         String read;
         boolean finish_game = false;
+        /*ArrayList<Integer> a1 = new ArrayList<Integer>();
+        a1.add(1);
+        a1.add(2);
+        a1.add(3);
+        ArrayList<Integer> a2 = new ArrayList<Integer>(a1);
+        ArrayList<Integer> a3 = a1;
+        System.out.println(a2);
+        System.out.println(a3);
+        a1.add(4);
+        System.out.println(a2);
+        System.out.println(a3);
+        HashMap<Integer,Integer> h1 = new HashMap<Integer,Integer>();
+        h1.put(0,0);
+        h1.put(1,1);
+        System.out.println(h1);
+        HashMap<Integer,Integer> h2 = new HashMap<Integer,Integer>(h1);
+        HashMap<Integer,Integer> h3 = h1;
+        h1.put(2,2);
+        System.out.println(h2);
+        System.out.println(h3);*/
         while(true){
             if(finish_game){
                 break;
@@ -73,6 +227,13 @@ public class BoardState {
                 BoardUnit bu = new BoardUnit(player_opp,(first_char=='F')?1:((first_char=='S')?2:3));
                 bs.addPiece(position, bu);
                 bs.printBoard();
+                //System.out.println("aaaaaaaaaaaaaaaaaaaaaaa");
+                //bs.afterPlacing(1,2,'d',1).printBoard(); 
+                System.out.println("owned:owed square ==> "+bs.getOwnedSquares()[0]+","+bs.getOwnedSquares()[1]);
+                System.out.println("owned:owed stack height ==> "+bs.getStackHeight()[0]+","+bs.getStackHeight()[1]);
+                System.out.println("owned:owed longest chain length ==> "+bs.getMaxChainLength()[0]+","+bs.getMaxChainLength()[1]);
+                System.out.println("evaluation = "+bs.afterPlacing(1,2,'d',1).getEvaluation()[0]+","+bs.afterPlacing(1,2,'d',1).getEvaluation()[1]);
+                
             }
             else{//means that opp has played "move a stack", assuming the correct format of input here
                 int pieces_to_move = Integer.parseInt(read.substring(0,1));
@@ -163,6 +324,7 @@ public class BoardState {
                     }
                 }
                 bs.printBoard();
+                System.out.println(bs.getOwnedSquares());
                 //System.out.println(pieces_to_move+","+posn_alphabet+","+posn_numeric+","+direction+","+seq_arr);
                 //finish_game = true;
             }
