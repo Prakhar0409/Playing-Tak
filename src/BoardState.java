@@ -175,6 +175,225 @@ public class BoardState {
         return result;
     }
     
+    BoardState moveStack(int player,char dirn, char posn_alphabet, int posn_numeric, ArrayList<Integer> moves){//returns the board state after moving the stack
+        BoardState result = new BoardState(player_me,player_opp,size,time);
+        for(int i=1; i<=size*size; i++){
+            //result.board.put(i,new ArrayList<BoardUnit>(this.board.get(i)));
+            for(int j =0; j<this.board.get(i).size(); j++){
+                int tmp_kind = this.board.get(i).get(j).kind;
+                int tmp_color = this.board.get(i).get(j).color;
+                result.board.get(i).add(new BoardUnit(tmp_color,tmp_kind));
+            }
+        }
+        int position = (((int)posn_alphabet)-97)*size + posn_numeric;
+        int sh = 0;
+        int moves_size=moves.size();
+        for(int i =0; i<moves_size; i++){
+            sh+=moves.get(i);
+        }
+        if(dirn == '+'){
+            int limit = posn_numeric+moves_size;
+            if(limit>size){//check that boundary is not crossed
+                return null;
+            }
+            else{
+                //scope of optimising here.Instead of checking if there is a wall/capstone here, check it before for all moves size in a separate function and return an array of results
+                int removal_index = 0;
+                for(int i=0; i<moves_size; i++){
+                    ArrayList<BoardUnit> entry = result.board.get(position);
+                    int entry_size = entry.size();
+                    if(i==0){
+                        removal_index=entry_size-sh;
+                    }
+                    ArrayList<BoardUnit> captured = result.board.get(position+i+1);
+                    int captured_size = captured.size();
+                    int kind = (captured.isEmpty())?(1):(captured.get(captured_size-1).kind);
+                    if(kind==1){//means that the square which is going to be captured by my piece(s) is having a flatstone on top OR is empty; so its completely okay to move there.
+                        ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                        for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                            entry.remove(removal_index);
+                        }
+                        captured.addAll(moving_unit);
+                    }
+                    else if(kind==2){//means that the square which is going to be captured by my piece(s) is a wall
+                        if(moves.get(i)!=1){//means that the ith combination of pieces is not only one ==> that can't be a single capstone ==> this move is invalid
+                            return null;
+                        }
+                        else{//means that the ith combination of pieces is only one
+                            if(entry.get(removal_index).kind == 3){//means that the piece is capstone; a valid move always FOR kind =2
+                                ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                                for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                                    entry.remove(removal_index);
+                                }
+                                BoardUnit removed_piece = captured.remove(captured.size()-1);
+                                removed_piece.setKind(1);
+                                captured.add(removed_piece);
+                                captured.addAll(moving_unit);
+                            }
+                            else{//means that piece is not a capstone ==> invalid move
+                                return null;
+                            }
+                        }
+                    }
+                    else if(kind==3){//means that the square which is going to be captured bymy piece(s) is a capstone
+                        return null;
+                    }
+                }
+            }
+        }
+        else if(dirn == '-'){
+         int limit = posn_numeric-moves_size;
+            if(limit<1){//check that boundary is not crossed
+                return null;
+            }
+            else{
+                //scope of optimising here.Instead of checking if there is a wall/capstone here, check it before for all moves size in a separate function and return an array of results
+                int removal_index = 0;
+                for(int i=0; i<moves_size; i++){
+                    ArrayList<BoardUnit> entry = result.board.get(position);
+                    int entry_size = entry.size();
+                    if(i==0){
+                        removal_index=entry_size-sh;
+                    }
+                    ArrayList<BoardUnit> captured = result.board.get(position-i-1);
+                    int captured_size = captured.size();
+                    int kind = (captured.isEmpty())?(1):(captured.get(captured_size-1).kind);
+                    if(kind==1){//means that the square which is going to be captured by my piece(s) is having a flatstone on top OR is empty; so its completely okay to move there.
+                        ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                        for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                            entry.remove(removal_index);
+                        }
+                        captured.addAll(moving_unit);
+                    }
+                    else if(kind==2){//means that the square which is going to be captured by my piece(s) is a wall
+                        if(moves.get(i)!=1){//means that the ith combination of pieces is not only one ==> that can't be a single capstone ==> this move is invalid
+                            return null;
+                        }
+                        else{//means that the ith combination of pieces is only one
+                            if(entry.get(removal_index).kind == 3){//means that the piece is capstone; a valid move always FOR kind =2
+                                ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                                for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                                    entry.remove(removal_index);
+                                }
+                                BoardUnit removed_piece = captured.remove(captured.size()-1);
+                                removed_piece.setKind(1);
+                                captured.add(removed_piece);
+                                captured.addAll(moving_unit);
+                            }
+                            else{//means that piece is not a capstone ==> invalid move
+                                return null;
+                            }
+                        }
+                    }
+                    else if(kind==3){//means that the square which is going to be captured bymy piece(s) is a capstone
+                        return null;
+                    }
+                }
+            }
+        }
+        else if(dirn == '<'){
+           int limit = ((int)posn_alphabet-96)-moves_size; //a=1,b=2,c=3....
+            if(limit<1){//check that boundary is not crossed
+                return null;
+            }
+            else{
+                //scope of optimising here.Instead of checking if there is a wall/capstone here, check it before for all moves size in a separate function and return an array of results
+                int removal_index = 0;
+                for(int i=0; i<moves_size; i++){
+                    ArrayList<BoardUnit> entry = result.board.get(position);
+                    int entry_size = entry.size();
+                    if(i==0){
+                        removal_index=entry_size-sh;
+                    }
+                    ArrayList<BoardUnit> captured = result.board.get(position-size*(i+1));
+                    int captured_size = captured.size();
+                    int kind = (captured.isEmpty())?(1):(captured.get(captured_size-1).kind);
+                    if(kind==1){//means that the square which is going to be captured by my piece(s) is having a flatstone on top OR is empty; so its completely okay to move there.
+                        ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                        for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                            entry.remove(removal_index);
+                        }
+                        captured.addAll(moving_unit);
+                    }
+                    else if(kind==2){//means that the square which is going to be captured by my piece(s) is a wall
+                        if(moves.get(i)!=1){//means that the ith combination of pieces is not only one ==> that can't be a single capstone ==> this move is invalid
+                            return null;
+                        }
+                        else{//means that the ith combination of pieces is only one
+                            if(entry.get(removal_index).kind == 3){//means that the piece is capstone; a valid move always FOR kind =2
+                                ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                                for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                                    entry.remove(removal_index);
+                                }
+                                BoardUnit removed_piece = captured.remove(captured.size()-1);
+                                removed_piece.setKind(1);
+                                captured.add(removed_piece);
+                                captured.addAll(moving_unit);
+                            }
+                            else{//means that piece is not a capstone ==> invalid move
+                                return null;
+                            }
+                        }
+                    }
+                    else if(kind==3){//means that the square which is going to be captured bymy piece(s) is a capstone
+                        return null;
+                    }
+                }
+            }
+        }
+        else if(dirn == '>'){
+          int limit = ((int)posn_alphabet-96)+moves_size;
+            if(limit>size){//check that boundary is not crossed
+                return null;
+            }
+            else{
+                //scope of optimising here.Instead of checking if there is a wall/capstone here, check it before for all moves size in a separate function and return an array of results
+                int removal_index = 0;
+                for(int i=0; i<moves_size; i++){
+                    ArrayList<BoardUnit> entry = result.board.get(position);
+                    int entry_size = entry.size();
+                    if(i==0){
+                        removal_index=entry_size-sh;
+                    }
+                    ArrayList<BoardUnit> captured = result.board.get(position+size*(i+1));
+                    int captured_size = captured.size();
+                    int kind = (captured.isEmpty())?(1):(captured.get(captured_size-1).kind);
+                    if(kind==1){//means that the square which is going to be captured by my piece(s) is having a flatstone on top OR is empty; so its completely okay to move there.
+                        ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                        for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                            entry.remove(removal_index);
+                        }
+                        captured.addAll(moving_unit);
+                    }
+                    else if(kind==2){//means that the square which is going to be captured by my piece(s) is a wall
+                        if(moves.get(i)!=1){//means that the ith combination of pieces is not only one ==> that can't be a single capstone ==> this move is invalid
+                            return null;
+                        }
+                        else{//means that the ith combination of pieces is only one
+                            if(entry.get(removal_index).kind == 3){//means that the piece is capstone; a valid move always FOR kind =2
+                                ArrayList<BoardUnit> moving_unit = new ArrayList<BoardUnit>(entry.subList(removal_index,removal_index+moves.get(i)));
+                                for(int j=removal_index;j<removal_index+moves.get(i);j++){
+                                    entry.remove(removal_index);
+                                }
+                                BoardUnit removed_piece = captured.remove(captured.size()-1);
+                                removed_piece.setKind(1);
+                                captured.add(removed_piece);
+                                captured.addAll(moving_unit);
+                            }
+                            else{//means that piece is not a capstone ==> invalid move
+                                return null;
+                            }
+                        }
+                    }
+                    else if(kind==3){//means that the square which is going to be captured bymy piece(s) is a capstone
+                        return null;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+    
     int[] getEvaluation(){
         int[] result = new int[2];
         result[0]=(this.getStackHeight()[0]+this.getOwnedSquares()[0]+this.getMaxChainLength()[0]);
@@ -183,6 +402,7 @@ public class BoardState {
     }
     
     public static void main(String args[]) throws IOException{
+        
         InputStreamReader isr = new InputStreamReader(System.in);
         Scanner sc = new Scanner(isr);
         int player_me = sc.nextInt();
@@ -195,26 +415,7 @@ public class BoardState {
         BufferedReader br = new BufferedReader(isr);
         String read;
         boolean finish_game = false;
-        /*ArrayList<Integer> a1 = new ArrayList<Integer>();
-        a1.add(1);
-        a1.add(2);
-        a1.add(3);
-        ArrayList<Integer> a2 = new ArrayList<Integer>(a1);
-        ArrayList<Integer> a3 = a1;
-        System.out.println(a2);
-        System.out.println(a3);
-        a1.add(4);
-        System.out.println(a2);
-        System.out.println(a3);
-        HashMap<Integer,Integer> h1 = new HashMap<Integer,Integer>();
-        h1.put(0,0);
-        h1.put(1,1);
-        System.out.println(h1);
-        HashMap<Integer,Integer> h2 = new HashMap<Integer,Integer>(h1);
-        HashMap<Integer,Integer> h3 = h1;
-        h1.put(2,2);
-        System.out.println(h2);
-        System.out.println(h3);*/
+        int player_switch = 0;//if its 0 its then opps chance else if its 1 then my cahnce
         while(true){
             if(finish_game){
                 break;
@@ -224,7 +425,8 @@ public class BoardState {
             if(first_char=='F' || first_char=='S' || first_char=='C'){//means that opponent has played a "place a stone"
                 int position = ((int)(read.charAt(1))-97)*size + Integer.parseInt(read.substring(2));//position of that piece on board
                 System.out.println((int)read.charAt(1)+","+Integer.parseInt(read.substring(2))+","+position);
-                BoardUnit bu = new BoardUnit(player_opp,(first_char=='F')?1:((first_char=='S')?2:3));
+                BoardUnit bu = new BoardUnit((player_switch==1)?player_me:player_opp,(first_char=='F')?1:((first_char=='S')?2:3));
+                player_switch=(player_switch==0)?(1):(0);
                 bs.addPiece(position, bu);
                 bs.printBoard();
                 //System.out.println("aaaaaaaaaaaaaaaaaaaaaaa");
@@ -234,6 +436,18 @@ public class BoardState {
                 System.out.println("owned:owed longest chain length ==> "+bs.getMaxChainLength()[0]+","+bs.getMaxChainLength()[1]);
                 System.out.println("evaluation = "+bs.afterPlacing(1,2,'d',1).getEvaluation()[0]+","+bs.afterPlacing(1,2,'d',1).getEvaluation()[1]);
                 
+            }
+            else if(first_char=='M' ){
+                //to use this section, type in the console : M<playerid><dirn><posn_alphabet><posn_numeric><Arraylist of moves> ... don't use any space
+                //moveStack(int player,char dirn, char posn_alphabet, int posn_numeric, ArrayList<Integer> moves)
+                ArrayList<Integer> tmp = new ArrayList<Integer>();
+                for(int i =5;i<read.length();i++){
+                    tmp.add(Integer.parseInt(read.substring(i,i+1)));
+                }
+                BoardState bs1 = bs.moveStack(Integer.parseInt(read.substring(1,2)),read.charAt(2),read.charAt(3),Integer.parseInt(read.substring(4,5)),tmp);
+                bs1.printBoard();
+                System.out.println("kvbdscbsj");
+                bs.printBoard();
             }
             else{//means that opp has played "move a stack", assuming the correct format of input here
                 int pieces_to_move = Integer.parseInt(read.substring(0,1));
