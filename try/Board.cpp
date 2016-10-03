@@ -7,16 +7,26 @@ Board::Board(){
 
 }
 
-Board::Board(int bsize){
+Board::Board(int bsize,int player_me){
 	size = bsize;	
-    for (int i = 0; i < num_players; ++i)
-    {
-        /* code */
-    }
+    player_num[0] = player_me;
+    player_num[1] = 3-player_me;
+
     num_players = 2;
-    player_num[2] = {0};        // p[0] -> us; p[1] => opponent
-    p_flats[2] = {0};
-    p_caps[2] = {0};
+    for (int i = 0; i < num_players; ++i){
+        
+        if(bsize == 5){
+            p_flats[i] = 21;
+            p_caps[i] = 1;
+        }else if(bsize == 6){
+            p_flats[i] = 30;
+            p_caps[i] = 1;
+        }else if(bsize == 6){
+            p_flats[i] = 40;
+            p_caps[i] = 1;
+        }
+    }
+    
 }
 
 void Board::addPiece(int pos, BoardUnit bu){

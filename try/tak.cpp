@@ -5,25 +5,25 @@
 using namespace std;
 
 /* Global Vars - all underscore naming */
-int cut_off = 2;
+int cut_off = 1;
 
 int board_size = 0;
 int time_limit = 0;
 bool finish_game = false;
 Board board;
 
-float maxMove(int p,Board board, float& alpha, float& beta, int level);
-float minMove(int p,Board board, float& alpha, float& beta, int level);
+string maxMove(int p,Board board, float& alpha, float& beta, int level);
+string minMove(int p,Board board, float& alpha, float& beta, int level);
 
 void placePiece(int p, string cmd, Board& board){
 	char first_char = cmd[0];
 	int pos = (cmd[1] - 'a') * board_size + (cmd[2] - '0' - 1);			// pos => i*n + j-1
     if(first_char == 'C'){
-   		p_caps[p]--;
+   		board.p_caps[p]--;
    	}else{
-   		p_flats[p]--;
+   		board.p_flats[p]--;
    	}
-   	BoardUnit bu = BoardUnit(player_num[p],(first_char=='F')?1:((first_char=='S')?2:3));
+   	BoardUnit bu = BoardUnit(board.player_num[p],(first_char=='F')?1:((first_char=='S')?2:3));
 	board.addPiece(pos, bu);
 }
 
@@ -85,28 +85,29 @@ void move(string cmd, Board& board){
 
 void initialise(){
 	// Intialisation phase
-	cin >> player_num[0];
+	int player_me;
+	cin >> player_me;
 	cin >> board_size;
 	cin >> time_limit;
-	player_num[1] = (player_num[0] == 1)? 2:1;
-	for(int i=0;i<num_players;i++){
-		p_caps[i] = 1;
-	}
-	int flats = 0;
-	if (board_size == 5){
-		flats = 21;
-	}else if (board_size == 6){
-		flats = 30;
-	}else if (board_size == 7){
-		flats = 40;
-	}else{
-		cerr<<"Invalide Board Size"<<endl;
-	}
-	for(int i=0;i<num_players;i++){
-		p_flats[i] = flats;
-	}
-	cerr << "Player: "<<player_num[0]<<" | board_size: "<<board_size<<" | time_limit: "<<time_limit<<endl;
-	board = Board(board_size);
+	// board.player_num[1] = (board.player_num[0] == 1)? 2:1;
+	// for(int i=0;i<num_players;i++){
+	// 	board.p_caps[i] = 1;
+	// }
+	// int flats = 0;
+	// if (board_size == 5){
+	// 	flats = 21;
+	// }else if (board_size == 6){
+	// 	flats = 30;
+	// }else if (board_size == 7){
+	// 	flats = 40;
+	// }else{
+	// 	cerr<<"Invalide Board Size"<<endl;
+	// }
+	// for(int i=0;i<num_players;i++){
+	// 	board.p_flats[i] = flats;
+	// }
+	cerr << "Player: "<<board.player_num[0]<<" | board_size: "<<board_size<<" | time_limit: "<<time_limit<<endl;
+	board = Board(board_size,player_me);
 }
 
 float getOwnedSquaresDiff(Board& board){//returns number of squares owned by me and that by opponent in an array [p_me,p_opp]
@@ -117,7 +118,7 @@ float getOwnedSquaresDiff(Board& board){//returns number of squares owned by me 
     for(int i =0; i< board_size; i++){
         for(int j =0; j<board_size; j++){
         	pos = (i*board_size)+j;
-        	if(board.b[pos].size() > 0 && board.b[pos].back().color == player_num[0]){
+        	if(board.b[pos].size() > 0 && board.b[pos].back().color == board.player_num[0]){
         		p_me++;
         	}else{
         		p_opp++;
@@ -142,7 +143,7 @@ float getStackHeightDiff(Board& board){
             	pos = (i*board_size)+j;
             	int stack_size = board.b[pos].size();
             	if( stack_size > 0 ){
-            		if(board.b[pos].back().color == player_num[0]){						//player_num[0] -> me
+            		if(board.b[pos].back().color == board.player_num[0]){						//"\n"[0] -> me
             			p_me += stack_size;
             		}else{
             			p_opp += stack_size;
@@ -167,7 +168,7 @@ float getMaxChainLengthDiff(Board& board){//returns the length of the maximum le
             	cur_me = 0;
             	cur_opp = 0;
             }else{
-            	if(board.b[pos].back().color == player_num[0]){
+            	if(board.b[pos].back().color == board.player_num[0]){
             		cur_me++;
             		cur_opp = 0;
             		if(cur_me > max_me){
@@ -186,7 +187,7 @@ float getMaxChainLengthDiff(Board& board){//returns the length of the maximum le
             	cur_me = 0;
             	cur_opp = 0;
             }else{
-            	if(board.b[pos].back().color == player_num[0]){
+            	if(board.b[pos].back().color == board.player_num[0]){
             		cur_me++;
             		cur_opp = 0;
             		if(cur_me > max_me){
@@ -202,7 +203,27 @@ float getMaxChainLengthDiff(Board& board){//returns the length of the maximum le
     return (max_me-max_opp);
 }
 
-
+string parseMove(string s, float& num){
+	int k=0;
+	bool neg = false;
+	if(s[0] == '-'){
+		neg = true;
+		k++;
+	}
+	while(s[k]!='#'){
+		num = num*10 + s[k] - '0';
+		k++;
+	}
+	k++;
+	if(neg){
+		num = -num;
+	}
+	string action = "";
+	for ( ; k < s.length(); ++k){
+		action += s[k];
+	}
+	return action;
+}
 
 float evaluate(Board& board){
 	float result = (getStackHeightDiff(board));
@@ -214,25 +235,28 @@ float evaluate(Board& board){
     return result;
 }
 
-float minMove(int p,Board board, float& alpha, float& beta, int level){
+string minMove(int p,Board board, float& alpha, float& beta, int level){
 	
 	cerr<<"Doing move at level: "<<level<<endl;
 	if(level>=cut_off){
 		float cost = evaluate(board);
 		cerr<<"Heuristic: "<<cost<<endl;
-		return cost;
+		// return cost;
+		return to_string(cost)+"#";
 	}
 
 	float value = INT_MAX;
 
 	// FOR ACTIONS
 	string starred_move = "";
+	string action_a_level_down="";
+	string s = "";
 	Board board_try = board; 
 	int pos = 0;
 	cerr<<"PLACING MOVES:"<<endl;
 	vector <string> place_moves;
 	string tmp_move = "";
-	if(p_flats[1] > 0 || p_caps[1] > 0){
+	if(board.p_flats[1] > 0 || board.p_caps[1] > 0){
 		cerr<<"Options of placing Flat or Standing stones: "<<endl;
 		for (int i = 0; i < board_size; ++i){
 			for (int j = 0; j < board_size; ++j){
@@ -240,28 +264,38 @@ float minMove(int p,Board board, float& alpha, float& beta, int level){
 				float maxi = 0;
 				if(board.b[pos].size() == 0 ){	
 					tmp_move = ((char) (i + 97)) + to_string(j+1);
-					if(p_flats[1]>0){
+					if(board.p_flats[1]>0){
 						board_try = board;
 						cerr<<"move: "<<"PLACE PIECE at: ("<< (char)(i+97) <<","<<j+1<<")"<<endl;
+	
 						placePiece(p,"F"+tmp_move,board_try);
 
-						maxi = maxMove(1-p,board_try,alpha,beta,level+1);
-						if(maxi < value){
+						//////////// max move and parsing max move action
+						s = maxMove(1-p,board_try,alpha,beta,level+1);
+						maxi = 0;
+						action_a_level_down = parseMove(s,maxi);
+
+						
+						if(maxi < value){			//findinf minimum
 							value = maxi;
-							starred_move = "F"+tmp_move;
+							starred_move = "F"+tmp_move;		//this is my min move
 						}
-						if(alpha >= value){return value;}
+						if(alpha >= value){return (to_string(value)+"#"+starred_move);}
 						beta = min(beta,value);
 
 						board_try = board;
 						placePiece(p,"S"+tmp_move,board_try);
 						// doMove(1-p,board_try,level+1);
-						maxi = maxMove(1-p,board_try,alpha,beta,level+1);
+						s = maxMove(1-p,board_try,alpha,beta,level+1);
+						maxi = 0;
+						action_a_level_down = parseMove(s,maxi);
+
 						if(maxi > value){
 							value = maxi;
 							starred_move = "S"+tmp_move;
 						}
-						if(alpha >= value){return value;}
+						if(alpha >= value){return (to_string(value)+"#"+starred_move);}
+						// if(alpha >= value){return value;}
 						beta = min(beta,value);
 
 
@@ -269,15 +303,18 @@ float minMove(int p,Board board, float& alpha, float& beta, int level){
 						place_moves.push_back("F"+tmp_move);
 						place_moves.push_back("S"+tmp_move);	
 					}
-					if(p_caps[p] > 0){
+					if(board.p_caps[p] > 0){
 						board_try = board;
 						placePiece(p,"C"+tmp_move,board_try);
-						maxi = maxMove(1-p,board_try,alpha,beta,level+1);
+						s = maxMove(1-p,board_try,alpha,beta,level+1);
+						maxi = 0;
+						action_a_level_down = parseMove(s,maxi);
 						if(maxi > value){
 							value = maxi;
 							starred_move = "C"+tmp_move;
 						}
-						if(alpha >= value){return value;}
+						if(alpha >= value){return (to_string(value)+"#"+starred_move);}
+						// if(alpha >= value){return value;}
 						beta = min(beta,value);
 
 						cerr << "C"<<tmp_move<<", ";
@@ -289,23 +326,26 @@ float minMove(int p,Board board, float& alpha, float& beta, int level){
 		cerr<<endl;
 	}
 
-	return value;
+	// return value;
+	return (to_string(value)+"#"+starred_move);
 }
 
 
-float maxMove(int p,Board board, float& alpha, float& beta, int level){
+string maxMove(int p,Board board, float& alpha, float& beta, int level){
 	
 	cerr<<"Doing move at level: "<<level<<endl;
 	if(level>=cut_off){
 		float cost = evaluate(board);
 		cerr<<"Heuristic: "<<cost<<endl;
-		return cost;
+		return to_string(cost)+"#";
 	}
 
 	float value = INT_MIN;
 
 	// FOR ACTIONS
 	string starred_move = "";
+	string action_a_level_down="";
+	string s = "";
 
 
 	Board board_try = board; 
@@ -315,7 +355,7 @@ float maxMove(int p,Board board, float& alpha, float& beta, int level){
 	cerr<<"PLACING MOVES:/"<<endl;
 	vector <string> place_moves;
 	string tmp_move = "";
-	if(p_flats[0] > 0 || p_caps[0] > 0){
+	if(board.p_flats[0] > 0 || board.p_caps[0] > 0){
 		cerr<<"Options of placing Flat or Standing stones: "<<endl;
 		for (int i = 0; i < board_size; ++i){
 			for (int j = 0; j < board_size; ++j){
@@ -323,29 +363,37 @@ float maxMove(int p,Board board, float& alpha, float& beta, int level){
 				float mini = 0;
 				if(board.b[pos].size() == 0 ){	
 					tmp_move = ((char) (i + 97)) + to_string(j+1);
-					if(p_flats[0]>0){
+					if(board.p_flats[0]>0){
 						board_try = board;
 						cerr<<"move: "<<"PLACE PIECE at: ("<< (char)(i+97) <<","<<j+1<<")"<<endl;
 						placePiece(p,"F"+tmp_move,board_try);
 
-						mini = minMove(1-p,board_try,alpha,beta,level+1);
+						// mini = minMove(1-p,board_try,alpha,beta,level+1);
+						s = minMove(1-p,board_try,alpha,beta,level+1);
+						mini = 0;
+						action_a_level_down = parseMove(s,mini);
+
 						if(mini > value){
 							value = mini;
 							starred_move = "F"+tmp_move;
 						}
-						if(value >= beta){return value;}
+						if(value >= beta){return (to_string(value)+"#"+starred_move);}
 						alpha = max(alpha,value);
 
 
 						board_try = board;
 						placePiece(p,"S"+tmp_move,board_try);
 						// doMove(1-p,board_try,level+1);
-						mini = minMove(1-p,board_try,alpha,beta,level+1);
+						// mini = minMove(1-p,board_try,alpha,beta,level+1);
+						s = minMove(1-p,board_try,alpha,beta,level+1);
+						mini = 0;
+						action_a_level_down = parseMove(s,mini);
+						
 						if(mini > value){
 							value = mini;
 							starred_move = "S"+tmp_move;
 						}
-						if(value >= beta){return value;}
+						if(value >= beta){return (to_string(value)+"#"+starred_move);}
 						alpha = max(alpha,value);
 
 
@@ -353,15 +401,20 @@ float maxMove(int p,Board board, float& alpha, float& beta, int level){
 						place_moves.push_back("F"+tmp_move);
 						place_moves.push_back("S"+tmp_move);	
 					}
-					if(p_caps[p] > 0){
+					if(board.p_caps[p] > 0){
 						board_try = board;
 						placePiece(p,"C"+tmp_move,board_try);
-						mini = minMove(1-p,board_try,alpha,beta,level+1);
+						// mini = minMove(1-p,board_try,alpha,beta,level+1);
+						s = minMove(1-p,board_try,alpha,beta,level+1);
+						mini = 0;
+						action_a_level_down = parseMove(s,mini);
+						
 						if(mini > value){
 							value = mini;
 							starred_move = "C"+tmp_move;
 						}
-						if(value >= beta){return value;}
+						// if(value >= beta){return value;}
+						if(value >= beta){return (to_string(value)+"#"+starred_move);}
 						alpha = max(alpha,value);
 
 						cerr << "C"<<tmp_move<<", ";
@@ -373,17 +426,21 @@ float maxMove(int p,Board board, float& alpha, float& beta, int level){
 		cerr<<endl;
 	}
 	
-	return value;
+	return (to_string(value)+"#"+starred_move);
+	// return value;
 }
 
-float doMove(Board board,int level){
+string doMove(Board board,int level){
 
 	// cout <<" hey"<<endl;
 	float alpha = INT_MIN;
 	float beta = INT_MAX;
 	board.printBoard();
-	maxMove(0,board,alpha,beta,0);				// maxMove(player,board,alpha,beta,)
-
+	string action = maxMove(0,board,alpha,beta,0);				// maxMove(player,board,alpha,beta,)
+	float value = 0;
+	cout<<"action: "<<action<<endl;
+	action = parseMove(action,value);
+	cout <<"DNJABKHFB0"<<endl;
 	board.printBoard();
 
 	// Board board_try = board;
@@ -400,7 +457,7 @@ float doMove(Board board,int level){
 	// 			cerr << "F"<<tmp_move<<", S"<<tmp_move<<", ";
 	// 			place_moves.push_back("F"+tmp_move);
 	// 			place_moves.push_back("S"+tmp_move);
-	// 			if(p_caps[p] > 0){
+	// 			if(board.p_caps[p] > 0){
 	// 				cerr << "C"<<tmp_move<<", ";
 	// 				place_moves.push_back("C"+tmp_move);
 	// 			}
@@ -411,7 +468,7 @@ float doMove(Board board,int level){
 
 	// placePiece();
 
-	return 0;
+	return action;
 }
 
 int main(){
@@ -421,8 +478,17 @@ int main(){
 
 	// Game Loop 
 	string cmd;
-	if(player_num[0] == 1){
-		doMove(board,0);		
+	if(board.player_num[0] == 1){
+		cmd = doMove(board,0);	
+		cout<<"My Move: "<<doMove<<endl;	
+		char first_char = cmd[0];
+		if(first_char=='F' || first_char=='S' || first_char=='C'){				//means that opponent has played a "place a stone"
+            placePiece(0,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
+            board.printBoard();	
+        }else{										//means that opp has played "move a stack", assuming the correct format of input here
+       		move(cmd,board);				// move(cmd,board)
+            board.printBoard();
+        }
 	}
 
 
@@ -436,11 +502,6 @@ int main(){
         if(first_char=='F' || first_char=='S' || first_char=='C'){				//means that opponent has played a "place a stone"
             
             // cout << "row: "<<cmd[1]<<" | col: "<<cmd[2]<<" | pos: "<<pos<<endl;
-            if(first_char == 'F' || first_char == 'S'){
-            	p_flats[1]--;
-            }else{
-            	p_caps[1]--;
-            }
             placePiece(1,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
             board.printBoard();	
         }
@@ -449,7 +510,18 @@ int main(){
             board.printBoard();
         }
 
-        doMove(board,0);		
+        
+		//mera move
+		cmd = doMove(board,0);		
+		cout<<"My Move: "<<doMove<<endl;	
+		if(first_char=='F' || first_char=='S' || first_char=='C'){				//means that opponent has played a "place a stone"
+            placePiece(0,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
+            board.printBoard();	
+        }else{										//means that opp has played "move a stack", assuming the correct format of input here
+       		move(cmd,board);				// move(cmd,board)
+            board.printBoard();
+        }
+
 	}
 
 

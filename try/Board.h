@@ -16,7 +16,7 @@ public:
 
 public:
 	Board();
-	Board(int bsize);
+	Board(int bsize,int player_me);
 	void addPiece(int pos, BoardUnit bu);
 	void printBoard();
 	~Board();
