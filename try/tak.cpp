@@ -235,6 +235,31 @@ float evaluate(Board& board){
     return result;
 }
 
+vector<string> generateMoves(Board& board,int player){
+	vector <string> place_moves;
+	int pos=0;
+	string tmp_move="";
+	if(board.p_flats[player] > 0 || board.p_caps[player] > 0){
+		for (int i = 0; i < board_size; ++i){
+			for (int j = 0; j < board_size; ++j){
+				pos = i*board_size + j;
+				if(board.b[pos].size() == 0 ){	
+					tmp_move = ((char) (i + 97)) + to_string(j+1);
+					
+					if(board.p_flats[1]>0){
+						place_moves.push_back("F"+tmp_move);
+						place_moves.push_back("S"+tmp_move);	
+					}
+					if(board.p_caps[p] > 0){
+						place_moves.push_back("C"+tmp_move);
+					}
+				}
+			}
+		}
+	}
+	return place_moves;
+}
+
 string minMove(int p,Board board, float& alpha, float& beta, int level){
 	
 	cerr<<"Doing move at level: "<<level<<endl;
