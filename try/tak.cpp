@@ -74,6 +74,9 @@ void moveStack(string cmd, Board& board){
 	for(int j=0;j<pieces_to_move;j++){
 		int num = (int) (cmd[i] - '0');
 		while(num--){
+			if(j == pieces_to_move - 1 && board.b[pos + next].size()>0 && board.b[pos + next].back().kind ==2 ){
+				board.b[pos + next].back().kind == 1;		// standing stone will be flattened by thecapstone. Validity of move was already checked before u just need tp flatten 
+			}
 			board.b[pos + next].push_back(board.b[pos][idx++]);
 			j++;
 		}
