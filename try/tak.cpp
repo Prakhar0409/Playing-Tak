@@ -5,7 +5,7 @@
 using namespace std;
 
 /* Global Vars - all underscore naming */
-int cut_off = 1;
+int cut_off = 5;
 
 int board_size = 0;
 int time_limit = 0;
@@ -89,25 +89,8 @@ void initialise(){
 	cin >> player_me;
 	cin >> board_size;
 	cin >> time_limit;
-	// board.player_num[1] = (board.player_num[0] == 1)? 2:1;
-	// for(int i=0;i<num_players;i++){
-	// 	board.p_caps[i] = 1;
-	// }
-	// int flats = 0;
-	// if (board_size == 5){
-	// 	flats = 21;
-	// }else if (board_size == 6){
-	// 	flats = 30;
-	// }else if (board_size == 7){
-	// 	flats = 40;
-	// }else{
-	// 	cerr<<"Invalide Board Size"<<endl;
-	// }
-	// for(int i=0;i<num_players;i++){
-	// 	board.p_flats[i] = flats;
-	// }
-	cerr << "Player: "<<board.player_num[0]<<" | board_size: "<<board_size<<" | time_limit: "<<time_limit<<endl;
 	board = Board(board_size,player_me);
+	cerr << "Player: "<<board.player_num[0]<<" | board_size: "<<board_size<<" | time_limit: "<<time_limit<<endl;
 }
 
 float getOwnedSquaresDiff(Board& board){//returns number of squares owned by me and that by opponent in an array [p_me,p_opp]
@@ -210,10 +193,12 @@ string parseMove(string s, float& num){
 		neg = true;
 		k++;
 	}
+	string number="";
 	while(s[k]!='#'){
-		num = num*10 + s[k] - '0';
+		number += s[k];
 		k++;
 	}
+	num = stof(number);
 	k++;
 	if(neg){
 		num = -num;
@@ -246,11 +231,11 @@ vector<string> generateMoves(Board& board,int player){
 				if(board.b[pos].size() == 0 ){	
 					tmp_move = ((char) (i + 97)) + to_string(j+1);
 					
-					if(board.p_flats[1]>0){
+					if(board.p_flats[player]>0){
 						place_moves.push_back("F"+tmp_move);
 						place_moves.push_back("S"+tmp_move);	
 					}
-					if(board.p_caps[p] > 0){
+					if(board.p_caps[player] > 0){
 						place_moves.push_back("C"+tmp_move);
 					}
 				}

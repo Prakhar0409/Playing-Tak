@@ -15,13 +15,19 @@ Board::Board(int bsize,int player_me){
     num_players = 2;
     for (int i = 0; i < num_players; ++i){
         
-        if(bsize == 5){
+        if(bsize == 3){
+            p_flats[i] = 8;
+            p_caps[i] = 1;
+        }else if(bsize == 4){
+            p_flats[i] = 15;
+            p_caps[i] = 1;
+        }else if(bsize == 5){
             p_flats[i] = 21;
             p_caps[i] = 1;
         }else if(bsize == 6){
             p_flats[i] = 30;
             p_caps[i] = 1;
-        }else if(bsize == 6){
+        }else if(bsize == 7){
             p_flats[i] = 40;
             p_caps[i] = 1;
         }
