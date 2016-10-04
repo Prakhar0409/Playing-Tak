@@ -142,25 +142,25 @@ float weightedTopStoneCount(Board& board){//returns number of squares owned by m
         		else{ points = 4;}
         		
         		//weights for flat,stand and cap
-        		if(board.b[pos].back().kind == 1){ 
-        			if(moves_me<5 || moves_me > 12){
-        				points += 2.5;	
-        			}else{
-        				points += 1.5;	
-        			}
-        		}else if(board.b[pos].back().kind == 2){		//stading stone 
-        			if(moves_me > 12){
-        				points += 1.5;	
-        			}else{
-        				points += 2;	
-        			}
-        		}else{
-        			if(moves_me > 5){
-        				points += 3;	
-        			}else{
-        				points += 2;	
-        			}
-        		}
+        		// if(board.b[pos].back().kind == 1){ 
+        		// 	if(moves_me<5 || moves_me > 12){
+        		// 		points += 2.5;	
+        		// 	}else{
+        		// 		points += 1.5;	
+        		// 	}
+        		// }else if(board.b[pos].back().kind == 2){		//stading stone 
+        		// 	if(moves_me > 12){
+        		// 		points += 1.5;	
+        		// 	}else{
+        		// 		points += 2;	
+        		// 	}
+        		// }else{
+        		// 	if(moves_me > 5){
+        		// 		points += 3;	
+        		// 	}else{
+        		// 		points += 2;	
+        		// 	}
+        		// }
         		
         		if(board.b[pos].back().color == board.player_color[0]){ p_me += points;}
         		else{ p_opp += points;}
@@ -186,18 +186,21 @@ float weightedStackSum(Board& board){
         float p_opp = 0;
         float points = 0;
         int pos = 0;
-        int num_owned=0;
+        int num_owned_me=0;
+        int num_owned_opp=0;
         for(int i = 0; i< board.size; i++){
             for(int j = 0; j< board.size; j++){
             	pos = (i*board.size)+j;
             	int stack_size = board.b[pos].size();
             	if( stack_size > 0 ){
             		if(board.b[pos].back().color == board.player_color[0]){						//"\n"[0] -> me
-            			num_owned = countStackElements(board,0,pos);
-            			p_me += stack_size * num_owned;
+            			num_owned_me = countStackElements(board,0,pos);
+            			num_owned_opp = countStackElements(board,1,pos);
+            			p_me += stack_size * (num_owned_me + num_owned_opp/2);
             		}else{
-            			num_owned = countStackElements(board,1,pos);
-            			p_opp += stack_size * num_owned;
+            			num_owned_me = countStackElements(board,1,pos);
+            			num_owned_opp = countStackElements(board,0,pos);
+            			p_opp += stack_size * (num_owned_me + num_owned_opp/2);
             		}
             	}
             }
@@ -224,7 +227,7 @@ float getMaxChainLengthDiff(Board& board){//returns the length of the maximum le
             	cur_me = 0;
             	cur_opp = 0;
             }else{
-            	if(board.b[pos].back().color == board.player_color[0]){
+            	if(board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind != 2){
             		cur_me++;
             		cur_opp = 0;
             		max_me = max(max_me,cur_me);
@@ -260,11 +263,11 @@ float getMaxChainLengthDiff(Board& board){//returns the length of the maximum le
             }
         }
     }
-    if(max_opp == board.size && max_me==board.size){ return INT_MAX;}
-    else if(max_opp == board.size){return INT_MIN;}
+    // if(max_opp == board.size && max_me==board.size){ return INT_MAX;}
+    if(max_opp == board.size){return INT_MIN;}
     else if(max_me == board.size){return INT_MAX;}
-    else if(max_opp == board.size - 1){return -5;}
-    else if(max_me == board.size - 1){return 5;}
+    else if(max_opp == board.size - 1){return -10;}
+    else if(max_me == board.size - 1){return 10;}
     // result[0]=max_me;
     // result[1] = max_opp;
     // return result;
@@ -282,20 +285,6 @@ float evaluate(Board& board){
 		// result -= (this.getStackHeight(i)+this.getOwnedSquares(i)+this.getMaxChainLength(i));
 	// }
     return result;
-}
-
-vector<int> partition(int num){
-	vector <int> part_list;
-	vector<int> part_smaller;
-
-	part_list.push_back(num);
-	for(int i=1;i<num;i++){
-		part_smaller = partition(num-i);
-		for(int j=0;j < part_smaller.size();j++){
-			part_list.push_back(part_smaller[j] * 10 + i);
-		}
-	}
-	return part_list;
 }
 
 int sumDigits(int num){
@@ -316,6 +305,22 @@ int numDigits(int num){
 	}
 	return n;
 }
+
+vector<int> partition(int num){
+	vector <int> part_list;
+	vector<int> part_smaller;
+
+	part_list.push_back(num);
+	for(int i=1;i<num;i++){
+		part_smaller = partition(num-i);
+		for(int j=0;j < part_smaller.size();j++){
+			part_list.push_back( i*pow(10,numDigits(part_smaller[j])) + part_smaller[j]);
+		}
+	}
+	return part_list;
+}
+
+
 
 bool checkValid(Board& board,int pos,char dir,int part){
 	int add_next=0;
@@ -410,6 +415,7 @@ vector<string> generateMoves(Board& board,int player){
 		}
 	}
 
+	// cerr<<"yoyoyo"<<endl;
 	for (int i = 0; i < board.size; ++i){
 		for (int j = 0; j < board.size; ++j){
 		//other moveStack moves			
@@ -562,7 +568,6 @@ string doMove(Board& board,int level){
 	float value = 0;
 	// cerr<<"action: "<<action<<endl;
 	action = parseMove(action,value);
-	board.printBoard();
 	
 	cmd = action;
 	// if(moves_me==0){
