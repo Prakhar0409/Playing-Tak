@@ -13,6 +13,7 @@ public:
 	int player_num[2]; //= {0};		// p[0] -> us; p[1] => opponent
 	int p_flats[2]; //= {0};
 	int p_caps[2]; 	//= {0};
+	bool debug;
 
 public:
 	Board();

@@ -8,7 +8,9 @@ Board::Board(){
 }
 
 Board::Board(int bsize,int player_me){
-	size = bsize;	
+    debug = true;
+	
+    size = bsize;	
     player_num[0] = player_me;
     player_num[1] = 3-player_me;
 
@@ -40,21 +42,23 @@ void Board::addPiece(int pos, BoardUnit bu){
 }
 
 void Board::printBoard(){
-    int board_size = size*size;
-    for(int i =0; i<size; i++){
-        string res = "";
-        cout << ((char) (i + 97));
-        // cout<<"RES: "<<res<<"  ||  c: "<<(char)(i+97)<<endl;
-        for(int j = 0; j < size; j++){
-            int pos = i*size+j;
-            string entry_set = "[";
-            for(int k=0; k<b[pos].size(); k++){
-                entry_set = entry_set + "("+ to_string(b[pos][k].color) + ","+ to_string(b[pos][k].kind)+"),";
+    if(debug){
+        int board_size = size*size;
+        for(int i =0; i<size; i++){
+            string res = "";
+            cerr << ((char) (i + 97));
+            // cerr<<"RES: "<<res<<"  ||  c: "<<(char)(i+97)<<endl;
+            for(int j = 0; j < size; j++){
+                int pos = i*size+j;
+                string entry_set = "[";
+                for(int k=0; k<b[pos].size(); k++){
+                    entry_set = entry_set + "("+ to_string(b[pos][k].color) + ","+ to_string(b[pos][k].kind)+"),";
+                }
+                entry_set = entry_set + "]";
+                res = res + to_string(j+1)+" : "+ entry_set+"; ";
             }
-            entry_set = entry_set + "]";
-            res = res + to_string(j+1)+" : "+ entry_set+"; ";
+            cerr<< res << endl;
         }
-        cout<< res << endl;
     }
 }
 

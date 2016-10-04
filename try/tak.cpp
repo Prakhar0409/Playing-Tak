@@ -5,7 +5,8 @@
 using namespace std;
 
 /* Global Vars - all underscore naming */
-int cut_off = 3;
+int num_moves = 0;
+int cut_off = 2;
 float time_limit = 0;
 bool finish_game = false;
 Board board;
@@ -259,6 +260,7 @@ bool checkValid(Board& board,int pos,char dir,int part){
 	int next = pos;
 	while(part!=0){
 		next = pos+add_next;
+
 		if(board.b[next].size()>0 && board.b[next].back().kind == 3){		//capstone found
 			return false;
 		}else if(board.b[next].size()>0 && board.b[next].back().kind == 2 && part/10 != 0){		//standing stone and moving stack beyond that
@@ -280,8 +282,9 @@ vector<string> generateStackMoves(Board& board,int pos){
 	int ups = r, downs = board.size - r - 1;
 	int lefts = c, rights = board.size - c - 1;
 	int stack_size = min( ((int) board.size) , (int)board.b[pos].size());
+	// cerr<<"stack_size: "<<stack_size<<endl;
 
-	char dir[4] = {'+','-','>','<'};			// + corresponds to right; - to left; < to up; > to down
+	char dir[4] = {'+','-','<','>'};			// + corresponds to right; - to left; < to up; > to down
 	int rem_squares[4] = {0};
 	rem_squares[0] = rights;
 	rem_squares[1] = lefts;
@@ -296,16 +299,17 @@ vector<string> generateStackMoves(Board& board,int pos){
 			for (int k = 0; k < part_list.size(); ++k)
 			{
 				if(numDigits(part_list[k]) <= rem_squares[j]){
-					part_dir.push_back(part_list[i]);
+					part_dir.push_back(part_list[k]);
 				}
 			}
 			for(int k=0;k<part_dir.size();k++){
 				if( checkValid(board,pos,dir[j],part_dir[k])){
-					all_moves.push_back(to_string(sumDigits(part_dir[k]))+ ((char) (r+'a')) + ((char) (c+'0')) + dir[j] + to_string(part_dir[k]));
+					all_moves.push_back(to_string(sumDigits(part_dir[k]))+ ((char) (r+'a')) + ((char) (c+'1')) + dir[j] + to_string(part_dir[k]));
 				}
 			}
 		}
 	}
+	
 	return all_moves;
 }
 
@@ -338,7 +342,8 @@ vector<string> generateMoves(Board& board,int player){
 	for (int i = 0; i < board.size; ++i){
 		for (int j = 0; j < board.size; ++j){
 		//other moveStack moves			
-			if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_num[0]){
+			pos = i*board.size + j;
+			if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_num[player]){
 				stack_moves = generateStackMoves(board,pos);
 			}
 		}
@@ -347,6 +352,11 @@ vector<string> generateMoves(Board& board,int player){
 		all_moves.insert(all_moves.end(), stack_moves.begin(),stack_moves.end());
 	}
 
+	// cerr<<"All available moves are: ";
+	// for (int i = 0; i < all_moves.size(); ++i){
+	// 	cerr<<all_moves[i]<<", ";
+	// }
+	// cerr<<endl;
 	return all_moves;
 }
 
@@ -428,7 +438,7 @@ string maxMove(int p,Board board, float& alpha, float& beta, int level){
 			moveStack(cmd,board_try);
 		}
 
-		s = maxMove(1-p,board_try,alpha,beta,level+1);
+		s = minMove(1-p,board_try,alpha,beta,level+1);
 		mini = 0;
 		action_a_level_down = parseMove(s,mini);
 
@@ -444,21 +454,52 @@ string maxMove(int p,Board board, float& alpha, float& beta, int level){
 	// return value;
 }
 
-string doMove(Board board,int level){
+string doMove(Board& board,int level){
 
 	// cout <<" hey"<<endl;
 	float alpha = INT_MIN;
 	float beta = INT_MAX;
-	int player = 0;
-	// board.printBoard();
-	string action = maxMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)
 	
-	float value = 0;
-	cout<<"action: "<<action<<endl;
-	action = parseMove(action,value);
-	cout <<"DNJABKHFB0"<<endl;
-	board.printBoard();
+	int player = 0;
+	string action;
+	if(num_moves == 0){
+		player = 1;
+		action = minMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
 
+	}else{
+		player = 0;
+		action = maxMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
+	}
+
+
+	float value = 0;
+	// cerr<<"action: "<<action<<endl;
+	action = parseMove(action,value);
+	// cerr <<"DNJABKHFB0"<<endl;
+	board.printBoard();
+	
+
+	
+	string cmd = action;
+	if(num_moves==0){
+		cerr<<"First opp piece placed: "<<cmd<<endl;
+	}else{
+		cerr<<"My Move: "<<cmd<<endl;	
+
+	}
+	//actually doing move
+	
+	if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] == 'C'){				//means that opponent has played a "place a stone"
+        placePiece(player,cmd,board);		
+        board.printBoard();	
+    }else{									
+   		moveStack(cmd,board);				
+        board.printBoard();
+    }
+	
+	// board.printBoard();
+	
+	num_moves ++;
 	return action;
 }
 
@@ -470,15 +511,7 @@ int main(){
 	string cmd;
 	if(board.player_num[0] == 1){
 		cmd = doMove(board,0);	
-		cout<<"My Move: "<<cmd<<endl;	
-	
-		if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] == 'C'){				//means that opponent has played a "place a stone"
-            placePiece(0,cmd,board);		
-            board.printBoard();	
-        }else{									
-       		moveStack(cmd,board);				
-            board.printBoard();
-        }
+		cout<<cmd<<endl;	
 	}
 
 
@@ -489,7 +522,7 @@ int main(){
 
 		// cin.ignore();
 		cin >> cmd;
-		cout<<"Opponent's Move: "<<cmd<<endl;		
+		cerr<<"Opponent's Move: "<<cmd<<endl;		
         if(cmd[0] =='F' || cmd[0]=='S' || cmd[0] =='C'){				//means that opponent has played a "place a stone"
             
             // cout << "row: "<<cmd[1]<<" | col: "<<cmd[2]<<" | pos: "<<pos<<endl;
@@ -503,15 +536,16 @@ int main(){
 
 
         // cin.ignore();
-		cmd = doMove(board,0);		
-		cout<<"My Move: "<<doMove<<endl;	
-		if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] =='C'){				
-            placePiece(0,cmd,board);		
-            board.printBoard();	
-        }else{										
-       		moveStack(cmd,board);				
-            board.printBoard();
-        }
+		cmd = doMove(board,0);	
+		cout<<cmd<<endl;	
+		// cerr<<"My Move: "<<doMove<<endl;	
+		// if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] =='C'){				
+  //           placePiece(0,cmd,board);		
+  //           board.printBoard();	
+  //       }else{										
+  //      		moveStack(cmd,board);				
+  //           board.printBoard();
+  //       }
 
 
 	}
