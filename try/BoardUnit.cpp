@@ -4,8 +4,8 @@
 using namespace std;
 
 BoardUnit::BoardUnit(){
-	color = 0;
-	kind = 0;
+	color = 0;		// 1=white,2=black
+	kind = 0;		//1=flatstone,2=wall,3=capstone
 }
 
 BoardUnit::BoardUnit(int bucolor, int bukind){
