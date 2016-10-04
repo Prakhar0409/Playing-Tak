@@ -5,8 +5,8 @@
 using namespace std;
 
 /* Global Vars - all underscore naming */
-int num_moves = 0;
-int cut_off = 2;
+int moves_me = 0,moves_opp = 0;
+int cut_off = 5;
 float time_limit = 0;
 bool finish_game = false;
 Board board;
@@ -462,7 +462,7 @@ string doMove(Board& board,int level){
 	
 	int player = 0;
 	string action;
-	if(num_moves == 0){
+	if(moves_me == 0){
 		player = 1;
 		action = minMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
 
@@ -481,7 +481,7 @@ string doMove(Board& board,int level){
 
 	
 	string cmd = action;
-	if(num_moves==0){
+	if(moves_me==0){
 		cerr<<"First opp piece placed: "<<cmd<<endl;
 	}else{
 		cerr<<"My Move: "<<cmd<<endl;	
@@ -499,7 +499,7 @@ string doMove(Board& board,int level){
 	
 	// board.printBoard();
 	
-	num_moves ++;
+	moves_me ++;
 	return action;
 }
 
@@ -522,30 +522,28 @@ int main(){
 
 		// cin.ignore();
 		cin >> cmd;
+		int player = 0;
+		if(moves_opp==0){
+			player=1;
+		}else{
+			player=0;
+		}
 		cerr<<"Opponent's Move: "<<cmd<<endl;		
         if(cmd[0] =='F' || cmd[0]=='S' || cmd[0] =='C'){				//means that opponent has played a "place a stone"
-            
             // cout << "row: "<<cmd[1]<<" | col: "<<cmd[2]<<" | pos: "<<pos<<endl;
-            placePiece(1,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
+            placePiece(player,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
             board.printBoard();	
         }
         else{										//means that opp has played "move a stack", assuming the correct format of input here
        		moveStack(cmd,board);					// moveStack(cmd,board)
             board.printBoard();
         }
+        moves_opp;
 
 
         // cin.ignore();
 		cmd = doMove(board,0);	
 		cout<<cmd<<endl;	
-		// cerr<<"My Move: "<<doMove<<endl;	
-		// if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] =='C'){				
-  //           placePiece(0,cmd,board);		
-  //           board.printBoard();	
-  //       }else{										
-  //      		moveStack(cmd,board);				
-  //           board.printBoard();
-  //       }
 
 
 	}
