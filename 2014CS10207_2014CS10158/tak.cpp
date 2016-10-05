@@ -7,12 +7,14 @@ using namespace std;
 
 /* Global Vars - all underscore naming */
 int moves_me = 0,moves_opp = 0;
-int cut_off = 4;
+int cut_off = 3;
 float time_limit = 0;
 bool finish_game = false;
 Board board;
 double w[NW] = {0};
 double f[NW] = {0};
+clock_t begin_time;
+float time_left=0;
 
 string maxMove(int p,Board board, float& alpha, float& beta, int level);
 string minMove(int p,Board board, float& alpha, float& beta, int level);
@@ -30,8 +32,10 @@ void initialise(){
 	cin >> player_me;
 	cin >> board_size;
 	cin >> time_limit;
+	time_left = time_limit-2;
 	board = Board(board_size,player_me);
 	cerr << "Player: "<<board.player_color[0]<<" | board size: "<<board.size<<" | time_limit: "<<time_limit<<endl;
+	begin_time = clock();
 }
 
 string parseMove(string s, float& num){
@@ -95,7 +99,6 @@ void moveStack(string cmd, Board& board){
     }else if(direction == '<'){
     	add_next = -board.size;
     }
-
 	int idx = board.b[pos].size() - pieces_to_move;
 	for(int j=0;j<pieces_to_move;j++){
 		next += add_next;
@@ -108,7 +111,6 @@ void moveStack(string cmd, Board& board){
 			j++;
 		}
 	}
-
 	idx = board.b[pos].size() - pieces_to_move;
 	board.b[pos].resize(idx);
 }
@@ -199,9 +201,9 @@ float weightedStackSum(Board& board){
             			num_owned_opp = countStackElements(board,1,pos);
             			p_me += stack_size * (num_owned_me + num_owned_opp/2);
             		}else{
-            			num_owned_me = countStackElements(board,1,pos);
-            			num_owned_opp = countStackElements(board,0,pos);
-            			p_opp += stack_size * (num_owned_me + num_owned_opp/2);
+            			num_owned_me = countStackElements(board,0,pos);
+            			num_owned_opp = countStackElements(board,1,pos);
+            			p_opp += stack_size * (num_owned_me/2 + num_owned_opp);
             		}
             	}
             }
@@ -279,7 +281,7 @@ int longestChain(Board board,int length,int pos,int p){
 	if(board.b[pos].size()==0 || board.b[pos].back().color != board.player_color[p] || board.b[pos].back().kind == 2){
 		return length;
 	}
-	cerr << "long long"<<endl;
+	
 
 	char dir[4] = {'+','-','>','<'};
 	int next[4] = {1,-1,board.size,-board.size};
@@ -303,120 +305,151 @@ float evaluate(Board& board){
 	
 	int pos=0;
 	int n = 0;
+
+	for(int i=0;i<NW;i++){
+		f[i] = 0;
+	}
+
 	//my flats+cap on top
-	// cerr<<"herer1111"<<endl;
-	// for (int i = 0; i < board.size; ++i)
-	// {
-	// 	for (int j = 0; j < board.size; ++j)
-	// 	{
-	// 		//count flats
-	// 		cerr<<"herer111100000"<<endl;
-	// 		if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind != 2 ){
-	// 			f[n]++;
-	// 		}else if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_color[1] && board.b[pos].back().kind != 2 ){
-	// 			f[n+1]++;
-	// 		}
+	
+	// cerr<<"Evaluation Start"<<endl;
+	for (int i = 0; i < board.size; ++i){
+		for (int j = 0; j < board.size; ++j){
+			pos = i*board.size + j;
+			//count flats			
+			if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind != 2 ){
+				f[n]++;
+			}else if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_color[1] && board.b[pos].back().kind != 2 ){
+				f[n+1]++;
+			}
 
-	// 		cerr<<"herer111111111_________11111"<<endl;
-	// 		//my capstone
-	// 		if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind == 3 ){
-	// 			//capstone near other pieces of same color
-	// 			cout<<"herer1111 _________11111111111_______111111111111"<<endl;
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0]) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0])  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0]) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0])){
-	// 				f[n+2]++;
-	// 			}
-	// 			cerr<<"herer1111 _________11111111111_______12222222222222222"<<endl;
-	// 			//capstone near other pieces of opposite color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1]) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1])  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1]) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1])){
-	// 				f[n+3]++;
-	// 			}
-	// 			cerr<<"herer1111 _________11111111111_______111133333333"<<endl;
-	// 			//capstone near other walls of same color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0] && board.b[pos-1].back().kind == 2) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0] && board.b[pos+1].back().kind == 2 )  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0] && board.b[pos-board.size].back().kind == 2) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0] && board.b[pos+board.size].back().kind == 2)){
-	// 				f[n+4]++;
-	// 			}
-	// 			cerr<<"herer1111 _________11111111111_______111114444444444"<<endl;
-	// 			//capstone near other walls of opp color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1] && board.b[pos-1].back().kind == 2) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1] && board.b[pos+1].back().kind == 2 )  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1] && board.b[pos-board.size].back().kind == 2) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1] && board.b[pos+board.size].back().kind == 2)){
-	// 				f[n+5]++;
-	// 			}
-	// 		}
+			//my capstone
+			if(board.b[pos].size()>0 && board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind == 3 ){
+			
+				//capstone near other pieces of same color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color == board.player_color[0]) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color == board.player_color[0])  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0]) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0])){
+					f[n+2]++;
+				}
+	
+				//capstone near other pieces of opposite color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1]) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1])  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1]) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1])){
+					f[n+3]++;
+				}
+				
+				//capstone near other walls of same color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0] && board.b[pos-1].back().kind == 2) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0] && board.b[pos+1].back().kind == 2 )  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0] && board.b[pos-board.size].back().kind == 2) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0] && board.b[pos+board.size].back().kind == 2)){
+					f[n+4]++;
+				}
+				
+				//capstone near other walls of opp color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1] && board.b[pos-1].back().kind == 2) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1] && board.b[pos+1].back().kind == 2 )  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1] && board.b[pos-board.size].back().kind == 2) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1] && board.b[pos+board.size].back().kind == 2)){
+					f[n+5]++;
+				}
+			}
 
-	// 		cerr<<"herer2222222"<<endl;
-	// 		//opp capstone
-	// 		if(board.b[pos].size()>0 && board.b[pos].back().color ==board.player_color[1] && board.b[pos].back().kind == 3 ){
-	// 			//capstone near other pieces of same color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0]) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0])  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0]) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0])){
-	// 				f[n+6]++;
-	// 			}
-	// 			//capstone near other pieces of opposite color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1]) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1])  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1]) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1])){
-	// 				f[n+7]++;
-	// 			}
-	// 			//capstone near other walls of same color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0] && board.b[pos-1].back().kind == 2) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0] && board.b[pos+1].back().kind == 2 )  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0] && board.b[pos-board.size].back().kind == 2) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0] && board.b[pos+board.size].back().kind == 2)){
-	// 				f[n+8]++;
-	// 			}
-	// 			//capstone near other walls of opp color
-	// 			if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1] && board.b[pos-1].back().kind == 2) || 
-	// 				(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1] && board.b[pos+1].back().kind == 2 )  ||
-	// 				(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1] && board.b[pos-board.size].back().kind == 2) ||
-	// 				(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1] && board.b[pos+board.size].back().kind == 2)){
-	// 				f[n+9]++;
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// n += 10;
-	// for(int i=0;i<n;i++){
-	// 	result += w[i]*f[i];	
-	// }
+			//opp capstone
+			if(board.b[pos].size()>0 && board.b[pos].back().color ==board.player_color[1] && board.b[pos].back().kind == 3 ){
+				//capstone near other pieces of same color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1]) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1])  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1]) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1])){
+					f[n+6]++;
+				}
 
-	// cerr<<"herer333333"<<endl;
+				//capstone near other pieces of opp color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0]) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0])  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0]) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0])){
+					f[n+7]++;
+				}
+			
+				//capstone near other walls of same color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[1] && board.b[pos-1].back().kind == 2) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[1] && board.b[pos+1].back().kind == 2 )  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[1] && board.b[pos-board.size].back().kind == 2) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[1] && board.b[pos+board.size].back().kind == 2)){
+					f[n+8]++;
+				}
+				//capstone near other walls of opp color
+				if( (j>0 && board.b[pos-1].size()>0 && board.b[pos-1].back().color ==board.player_color[0] && board.b[pos-1].back().kind == 2) || 
+					(j<board.size-1 && board.b[pos+1].size()>0 && board.b[pos+1].back().color ==board.player_color[0] && board.b[pos+1].back().kind == 2 )  ||
+					(i>0 && board.b[pos-board.size].size()>0 && board.b[pos-board.size].back().color ==board.player_color[0] && board.b[pos-board.size].back().kind == 2) ||
+					(i<board.size-1 && board.b[pos+board.size].size()>0 && board.b[pos+board.size].back().color ==board.player_color[0] && board.b[pos+board.size].back().kind == 2)){
+					f[n+9]++;
+				}
+			}
+		}
+	}
+	n += 10;
+	
 
-	// int max_length = 0;
-	// // max chain length for me
-	// for(int i=0;i<board.size;i++){
-	// 	for(int j=0;j<board.size;j++){
-	// 		pos = i*board.size + j;
-	// 		max_length = max(max_length,longestChain(board,0,pos,0));		//longestChain(board,length,position,player)
-	// 	}	
-	// }
-	// f[n++] = max_length;
+	int max_length = 0;
+	// max chain length for me
+	for(int i=0;i<board.size;i++){
+		for(int j=0;j<board.size;j++){
+			pos = i*board.size + j;
+			max_length = max(max_length,longestChain(board,0,pos,0));		//longestChain(board,length,position,player)
+		}	
+	}
+	f[n++] = max_length*max_length;
 
-	// // max chain length for opp
-	// for(int i=0;i<board.size;i++){
-	// 	for(int j=0;j<board.size;j++){
-	// 		pos = i*board.size + j;
-	// 		max_length = max(max_length,longestChain(board,0,pos,1));		//longestChain(board,length,position,player)
-	// 	}	
-	// }
-	// f[n++] = max_length;
+	result += f[n++];
+	// max chain length for opp
+	for(int i=0;i<board.size;i++){
+		for(int j=0;j<board.size;j++){
+			pos = i*board.size + j;
+			max_length = max(max_length,longestChain(board,0,pos,1));		//longestChain(board,length,position,player)
+		}	
+	}
+	f[n++] = max_length*max_length;				//w[11] -> maxlength opp
+	n+=2;
 
+	//Controlling bigger stacks
+	int num_owned_me=0;
+    int num_owned_opp=0;
+    int num_stacks_me=0;
+    int num_stacks_opp=0;
+    for(int i = 0; i< board.size; i++){
+        for(int j = 0; j< board.size; j++){
+        	pos = (i*board.size)+j;
+        	int stack_size = board.b[pos].size();
+        	if( stack_size > 0 ){
+        		if(board.b[pos].back().color == board.player_color[0]){				//f[12] =  stacks owned by me
+        			num_owned_me = countStackElements(board,0,pos);
+        			num_owned_opp = countStackElements(board,1,pos);
+        			f[12] += (stack_size+1) * (num_owned_me + num_owned_opp/2);
+
+        		}else{
+        			num_owned_me = countStackElements(board,0,pos);
+        			num_owned_opp = countStackElements(board,1,pos);
+        			f[13] += (stack_size+1) * (num_owned_me/2 + num_owned_opp);			//f[12] =  stacks owned by opponent
+        		}
+        	}
+        }
+    }
+    n+=2;
+
+
+
+	for(int i=0;i<n;i++){
+		result += w[i]*f[i];	
+	}
 
 	
-		
 	
 	
 	// cerr<<"Evaluation Started#############"<<endl;
@@ -427,7 +460,7 @@ float evaluate(Board& board){
 	result += weightedStackSum(board);
 	// cerr<<" Part233333: Evaluation Started#############"<<endl;
 	result += getMaxChainLengthDiff(board);
-	// cerr<<" DONE: Evaluation Started#############"<<endl;
+	// cerr<<" DONE Evaluation #############"<<endl;
 	// for (int i = 1; i < num_players; ++i){
 		// result -= (this.getStackHeight(i)+this.getOwnedSquares(i)+this.getMaxChainLength(i));
 	// }
@@ -609,19 +642,19 @@ string minMove(int p,Board board, float& alpha, float& beta, int level){
 	string cmd;
 
 
-	board_try.printBoard();
-	cerr<<"All available moves are FOR MIN MOVE AT level: "<<level<<" |  :  ";
-	for (int i = 0; i < moves.size(); ++i){
-		cerr<<moves[i]<<", ";
-	}
-	cerr<<endl;
+	// board_try.printBoard();
+	// cerr<<"All available moves are FOR MIN MOVE AT level: "<<level<<" |  :  ";
+	// for (int i = 0; i < moves.size(); ++i){
+	// 	cerr<<moves[i]<<", ";
+	// }
+	// cerr<<endl;
 
 	for (int i = 0; i < moves.size(); ++i){
 		cmd = moves[i];
 		board_try = board;
-		cerr<<"################"<<endl;
-		board_try.printBoard();
-		cerr<<"MIN move at level: "<<level<<" : cmd: "<<cmd<<endl;
+		// cerr<<"################"<<endl;
+		// board_try.printBoard();
+		// cerr<<"MIN move at level: "<<level<<" : cmd: "<<cmd<<endl;
 		// cerr<<"MIN: Move: "<<cmd<<endl;
 		// board_try.printBoard();
 		if(cmd[0] == 'F' || cmd[0] == 'S' || cmd[0] == 'C'){
@@ -668,19 +701,19 @@ string maxMove(int p,Board board, float& alpha, float& beta, int level){
 	vector<string> moves = generateMoves(board_try,p);
 	string cmd;
 
-	board_try.printBoard();
-	cerr<<"All available moves are FOR MAXXXXX MOVE AT level: "<<level<<" |  :  ";
-	for (int i = 0; i < moves.size(); ++i){
-		cerr<<moves[i]<<", ";
-	}
-	cerr<<endl;
+	// board_try.printBoard();
+	// cerr<<"All available moves are FOR MAXXXXX MOVE AT level: "<<level<<" |  :  ";
+	// for (int i = 0; i < moves.size(); ++i){
+	// 	cerr<<moves[i]<<", ";
+	// }
+	// cerr<<endl;
 
 	for (int i = 0; i < moves.size(); ++i){
 		cmd = moves[i];
 		board_try = board;
-		cerr<<"################"<<endl;
-		board_try.printBoard();
-		cerr<<"Tyring MAX move at level: "<<level<<" : cmd: "<<cmd<<endl;
+		// cerr<<"################"<<endl;
+		// board_try.printBoard();
+		// cerr<<"Tyring MAX move at level: "<<level<<" : cmd: "<<cmd<<endl;
 		// cerr<<"MAXAX: Move: "<<cmd<<endl;
 		// board_try.printBoard();
 		if(cmd[0] == 'F' || cmd[0] == 'S' || cmd[0] == 'C'){
@@ -707,7 +740,26 @@ string maxMove(int p,Board board, float& alpha, float& beta, int level){
 
 string doMove(Board& board,int level){
 
-	cerr<<"#############Planning a Move#############"<<endl;
+	if(moves_me <= 5) {
+		cut_off = 2;
+	}
+	else {
+		
+		
+	 	if(time_left >= 80){
+	 		cut_off = 4;
+	 	}else if(time_left >= 45){
+	 		cut_off = 3;
+	 	}
+	 	else if(time_left >= 15) {
+	 		cut_off = 2;
+	 	}
+	 	else{
+	 		cut_off = 1;
+	 	}
+	 }
+
+	// cerr<<"#############Planning a Move#############"<<endl;
 	string cmd;
 	int player = 0;
 	if(moves_me == 0){
@@ -725,33 +777,26 @@ string doMove(Board& board,int level){
 	}
 	float alpha = INT_MIN;
 	float beta = INT_MAX;
-	
-	
 	string action;
-	// player = 0;
+	
+	
+	
+	// time_t move_start = time(0);
+	
 	action = maxMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
 
-	// if(moves_me == 0){
-	// 	player = 1;
-	// 	action = minMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
+	// time_t move_end = time(0);
+	// time_passed += difftime(move_end, move_start);
 
-	// }else{
-	// 	player = 0;
-	// 	action = maxMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
-	// }
-
+	// time_left = time_limit - float( clock () - begin_time ) /  CLOCKS_PER_SEC;
+	// cerr<<"Time Left: "<<time_left<<endl;
+	
 
 	float value = 0;
-	// cerr<<"action: "<<action<<endl;
 	action = parseMove(action,value);
 	
 	cmd = action;
-	// if(moves_me==0){
-	// 	cerr<<"First opp piece placed: "<<cmd<<endl;
-	// }else{
-		cerr<<"My Move: "<<cmd<<endl;	
-	// }
-	//actually doing move
+	cerr<<"My Move: "<<cmd<<endl;	
 	
 	if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] == 'C'){				//means that opponent has played a "place a stone"
         placePiece(player,cmd,board);		
@@ -761,7 +806,6 @@ string doMove(Board& board,int level){
         board.printBoard();
     }
 	
-	// board.printBoard();
 	
 	moves_me ++;
 	return action;
@@ -771,10 +815,17 @@ int main(){
 
 	initialise();
 
+	// clock_t time_move_start = clock();
+	time_t time_move_start = time(0);
+	float time_move;
 	// Game Loop 
 	string cmd;
 	if(board.player_color[0] == 1){			// if i am player 1 i do a move
-		cmd = doMove(board,0);				
+		cmd = doMove(board,0);		
+		// time_move = float(clock() - time_move_start)/CLOCKS_PER_SEC;
+		time_move = difftime(time(0),time_move_start);
+		time_left -= time_move;
+		cerr<<"time lefttttt:  "<<time_left<<endl;
 		cout<<cmd<<endl;	
 	}
 
@@ -786,7 +837,8 @@ int main(){
 
 		cin >> cmd;
 
-		
+		// time_move_start = clock();
+		time_move_start = time(0);		
 		// if moves ==0 then first move from opp will move my piece
 		if(moves_opp==0){
 			player=0;
@@ -805,7 +857,12 @@ int main(){
         moves_opp++;
 
 
+        
 		cmd = doMove(board,0);	
+		// time_move = float(clock() - time_move_start) / CLOCKS_PER_SEC;
+		time_move = difftime(time(0),time_move_start);
+		time_left -= time_move;
+		cerr<<"time LEFTTTTT:::: "<<time_left<<endl; 
 		cout<<cmd<<endl;	
 
 
