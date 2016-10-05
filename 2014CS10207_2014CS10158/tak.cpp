@@ -7,7 +7,7 @@ using namespace std;
 
 /* Global Vars - all underscore naming */
 int moves_me = 0,moves_opp = 0;
-int cut_off = 2;
+int cut_off = 4;
 float time_limit = 0;
 bool finish_game = false;
 Board board;
@@ -99,7 +99,7 @@ void moveStack(string cmd, Board& board){
 	int idx = board.b[pos].size() - pieces_to_move;
 	for(int j=0;j<pieces_to_move;j++){
 		next += add_next;
-		int num = (int) (cmd[i] - '0');
+		int num = (int) (cmd[i++] - '0');
 		while(num--){
 			if(j == pieces_to_move - 1 && board.b[next].size()>0 && board.b[next].back().kind ==2 ){
 				board.b[next].back().kind == 1;		// standing stone will be flattened by thecapstone. Validity of move was already checked before u just need tp flatten 

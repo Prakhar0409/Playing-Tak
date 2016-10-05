@@ -8,7 +8,7 @@ Board::Board(){
 }
 
 Board::Board(int bsize,int player_me){
-    debug = true;
+    debug = false;
 	
     size = bsize;	
     player_color[0] = player_me;
