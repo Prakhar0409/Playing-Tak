@@ -72,13 +72,9 @@ void placePiece(int p, string cmd, Board& board){
 
 
 void moveStack(string cmd, Board& board){
-	int pieces_to_move = 0;
 	int i=0;
-	while(cmd[i]>='0' && cmd[i] <='9'){
-		pieces_to_move = pieces_to_move*10 + cmd[i]-'0';
-		i++;
-	}
-	// cout << "Number of pieces to move: "<<pieces_to_move<<endl;
+	int pieces_to_move = (int)(cmd[i++] - '0');
+	
     int posn_alphabet = (int)(cmd[i++] - 'a');
     int posn_numeric = (int)(cmd[i++] - '0' - 1);
     int pos = posn_alphabet * board.size + posn_numeric ;						//position of that piece on board
@@ -88,35 +84,29 @@ void moveStack(string cmd, Board& board){
     	cout << "Invalid move"<<endl;
     	return;
     }
-    int next = 0;
+    int next = pos;
     int add_next = 0;
     if(direction == '-'){
-    	next = -1;
     	add_next = -1;
     }else if(direction == '+'){
-    	next = 1;
     	add_next = 1;
     }else if(direction == '>'){
-    	next = board.size;
     	add_next = board.size;
     }else if(direction == '<'){
     	add_next = -board.size;
-    	next = -board.size;
     }
 
-    // cerr << "about to move:: "<<endl;
 	int idx = board.b[pos].size() - pieces_to_move;
-	// cout<<"total: "<< board.b[position].size()<<"  ||  idx: "<<idx<<endl;
 	for(int j=0;j<pieces_to_move;j++){
+		next += add_next;
 		int num = (int) (cmd[i] - '0');
 		while(num--){
-			if(j == pieces_to_move - 1 && board.b[pos + next].size()>0 && board.b[pos + next].back().kind ==2 ){
-				board.b[pos + next].back().kind == 1;		// standing stone will be flattened by thecapstone. Validity of move was already checked before u just need tp flatten 
+			if(j == pieces_to_move - 1 && board.b[next].size()>0 && board.b[next].back().kind ==2 ){
+				board.b[next].back().kind == 1;		// standing stone will be flattened by thecapstone. Validity of move was already checked before u just need tp flatten 
 			}
-			board.b[pos + next].push_back(board.b[pos][idx++]);
+			board.b[next].push_back(board.b[pos][idx++]);
 			j++;
 		}
-		next += add_next;
 	}
 
 	idx = board.b[pos].size() - pieces_to_move;
@@ -783,20 +773,21 @@ int main(){
 
 	// Game Loop 
 	string cmd;
-	if(board.player_color[0] == 1){
-		cmd = doMove(board,0);	
+	if(board.player_color[0] == 1){			// if i am player 1 i do a move
+		cmd = doMove(board,0);				
 		cout<<cmd<<endl;	
 	}
 
-
+	int player = 0;
 	while(true){
 		if(finish_game){
 			break;
 		}
 
-		// cin.ignore();
 		cin >> cmd;
-		int player = 0;
+
+		
+		// if moves ==0 then first move from opp will move my piece
 		if(moves_opp==0){
 			player=0;
 		}else{
@@ -804,7 +795,6 @@ int main(){
 		}
 		cerr<<"Opponent's Move: "<<cmd<<endl;		
         if(cmd[0] =='F' || cmd[0]=='S' || cmd[0] =='C'){				//means that opponent has played a "place a stone"
-            // cout << "row: "<<cmd[1]<<" | col: "<<cmd[2]<<" | pos: "<<pos<<endl;
             placePiece(player,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
             board.printBoard();	
         }
@@ -815,7 +805,6 @@ int main(){
         moves_opp++;
 
 
-        // cin.ignore();
 		cmd = doMove(board,0);	
 		cout<<cmd<<endl;	
 
