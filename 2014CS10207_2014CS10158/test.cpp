@@ -1,23 +1,22 @@
 #include <bits/stdc++.h>
-#include <unistd.h>
 #include "Board.h"
 #define s(n) scanf("%d",&n)
 #define NW 500
-
+ 
 using namespace std;
 
 /* Global Vars - all underscore naming */
 int moves_me = 0,moves_opp = 0;
-int cut_off = 4;
+int cut_off = 2;
 bool finish_game = false;
 Board board;
 double w[NW] = {0};
 double f[NW] = {0};
 
-double time_left=0;
+float time_left=0;
 
-string maxMove(int p,Board board, double alpha, double beta, int level);
-string minMove(int p,Board board, double alpha, double beta, int level);
+string maxMove(int p,Board board, float& alpha, float& beta, int level);
+string minMove(int p,Board board, float& alpha, float& beta, int level);
 
 inline void initialise(){
 	//read the weights
@@ -38,7 +37,7 @@ inline void initialise(){
 	return;
 }
 
-inline string parseMove(const string& s, double& num){
+inline string parseMove(const string& s, float& num){
 	int k=0;
 	bool neg = false;
 	if(s[0] == '-'){
@@ -130,8 +129,52 @@ inline bool isEdge(int r,int c){
 	return false;
 }
 
+float weightedTopStoneCount(Board& board){//returns number of squares owned by me and that by opponent in an array [p_me,p_opp]
+    float p_me=0;
+    float p_opp = 0;
+    float points = 0;
+    int pos = 0;
+    for(int i = 0; i< board.size; i++){
+        for(int j = 0; j<board.size; j++){
+        	pos = (i*board.size)+j;
+        	if(board.b[pos].size() > 0){ 
+        		
+        		//weights for corners edges and middle
+        		if( isCorner(i,j)) {points = 2;}
+        		else if (isEdge(i,j)){points = 3;}
+        		else{ points = 4;}
+        		
+        		//weights for flat,stand and cap
+        		// if(board.b[pos].back().kind == 1){ 
+        		// 	if(moves_me<3 || moves_me > 8){
+        		// 		points += 1.5;	
+        		// 	}else{
+        		// 		points += 2.5;	
+        		// 	}
+        		// }else if(board.b[pos].back().kind == 2){		//stading stone 
+        		// 	if(moves_me<3 || moves_me >7 ){
+        		// 		points += 1.5;	
+        		// 	}else{
+        		// 		points += 2;	
+        		// 	}
+        		// }else{
+        		// 	if(moves_me > 5){
+        		// 		points += 3;	
+        		// 	}else{
+        		// 		points += 2;	
+        		// 	}
+        		// }
+        		
+        		if(board.b[pos].back().color == board.player_color[0]){ p_me += points;}
+        		else{ p_opp += points;}
+        	}
+        }
+    }
+    return (p_me - p_opp);
 
-inline double countStackElements(Board& board,int player,int pos){
+}
+
+inline float countStackElements(Board& board,int player,int pos){
 	int stack_size = board.b[pos].size(), num=0;
 	for (int i = 0; i < stack_size; ++i){
 		if(board.b[pos][i].color == board.player_color[player]){
@@ -139,6 +182,97 @@ inline double countStackElements(Board& board,int player,int pos){
 		}
 	}
 	return num;
+}
+
+inline float weightedStackSum(Board& board){
+        float p_me=0;
+        float p_opp = 0;
+        float points = 0;
+        int pos = 0;
+        int num_owned_me=0;
+        int num_owned_opp=0;
+        for(int i = 0; i< board.size; i++){
+            for(int j = 0; j< board.size; j++){
+            	pos = (i*board.size)+j;
+            	int stack_size = board.b[pos].size();
+            	if( stack_size > 0 ){
+            		if(board.b[pos].back().color == board.player_color[0]){						//"\n"[0] -> me
+            			num_owned_me = countStackElements(board,0,pos);
+            			num_owned_opp = countStackElements(board,1,pos);
+            			p_me += stack_size * (num_owned_me + num_owned_opp/2);
+            		}else{
+            			num_owned_me = countStackElements(board,0,pos);
+            			num_owned_opp = countStackElements(board,1,pos);
+            			p_opp += stack_size * (num_owned_me/2 + num_owned_opp);
+            		}
+            	}
+            }
+        }
+        
+        return (p_me - p_opp);
+}
+
+float getMaxChainLengthDiff(Board& board){//returns the length of the maximum length chain of mine and opp's
+    float max_me=0,cur_me=0,max_opp=0,cur_opp=0;
+    int pos = 0;
+
+    //going along columns
+    for(int i = 0; i< board.size; i++){
+        for(int j = 0; j< board.size; j++){
+            pos = (i*board.size)+j;
+            if(j==0){
+            	cur_me = cur_opp = 0;
+            }
+            int stack_size = board.b[pos].size();
+            if(stack_size == 0 ){
+            	cur_me = 0;
+            	cur_opp = 0;
+            }else{
+            	if(board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind != 2){
+            		cur_me++;
+            		cur_opp = 0;
+            		max_me = max(max_me,cur_me);
+            	}else if(board.b[pos].back().color == board.player_color[1] && board.b[pos].back().kind != 2){
+            		cur_me = 0;
+            		cur_opp++;
+            		max_opp = max(max_opp,cur_opp);
+            	}
+            }
+        }
+    }
+
+    for(int j = 0; j< board.size; j++){
+        for(int i = 0; i< board.size; i++){
+            pos = (i*board.size)+j;
+            if(i==0){
+            	cur_me = cur_opp = 0;
+            }
+            int stack_size = board.b[pos].size();
+            if(stack_size == 0 ){
+            	cur_me = 0;
+            	cur_opp = 0;
+            }else{
+            	if(board.b[pos].back().color == board.player_color[0] && board.b[pos].back().kind != 2){
+            		cur_me++;
+            		cur_opp = 0;
+            		max_me = max(max_me,cur_me);
+            	}else if(board.b[pos].back().color == board.player_color[1] && board.b[pos].back().kind != 2){
+            		cur_me = 0;
+            		cur_opp++;
+            		max_opp = max(max_opp,cur_opp);
+            	}
+            }
+        }
+    }
+    // if(max_opp == board.size && max_me==board.size){ return INT_MAX;}
+    if(max_opp == board.size){return INT_MIN;}
+    else if(max_me == board.size){return INT_MAX;}
+    else if(max_opp == board.size - 1){return -10;}
+    else if(max_me == board.size - 1){return 10;}
+    // result[0]=max_me;
+    // result[1] = max_opp;
+    // return result;
+    return (max_me-max_opp)*(max_me-max_opp);
 }
 
 int longestChain(Board& board,int pos,int p,unordered_set<int> & visited){
@@ -160,6 +294,7 @@ int longestChain(Board& board,int pos,int p,unordered_set<int> & visited){
 			maxi = max(maxi,1 + longestChain(board,next_pos,p,visited));
 		}
 	}		
+	
 	return maxi;
 }
 
@@ -184,8 +319,7 @@ bool roadWin(Board& board,int p){
     while(!dfs.empty()){
     	pos = dfs.top(); 	dfs.pop();
     	if(winning.find(pos) != winning.end()){		//found in winning set
-    		// cerr<<"vertical in col: "<<pos<<endl;
-            return true;
+    		return true;
     	}
     	r = pos/board.size;
     	c = pos % board.size;
@@ -194,7 +328,7 @@ bool roadWin(Board& board,int p){
     			 continue;
     		}
     		next_pos = pos+next[j];
-    		if( next_pos >0 && next_pos < board.area && visited.find(next_pos) == visited.end() 
+    		if( next_pos >0 && next_pos < board.area  && visited.find(next_pos) == visited.end() 
     				&& !board.b[next_pos].empty() && board.b[next_pos].back().color == board.player_color[p]  
     				&&  board.b[next_pos].back().kind != 2){
     			dfs.push(next_pos);
@@ -214,13 +348,9 @@ bool roadWin(Board& board,int p){
     	}
     	winning.insert( board.area - pos - 1);
     }
-
-    
-
     while(!dfs.empty()){
     	pos = dfs.top(); 	dfs.pop();
     	if(winning.find(pos) != winning.end()){
-            // cerr<<"Horizontal in row: "<<pos<<endl;
     		return true;
     	}
     	r= pos / board.size;
@@ -230,11 +360,9 @@ bool roadWin(Board& board,int p){
     			continue;
     		}
     		next_pos = pos+next[j];
-
     		if( next_pos >0 && next_pos < board.area && visited.find(next_pos) == visited.end() && !board.b[next_pos].empty() 
     				&& board.b[next_pos].back().color == board.player_color[p]  &&  board.b[next_pos].back().kind != 2){
-    		
-            	dfs.push(next_pos);
+    			dfs.push(next_pos);
     			visited.insert(next_pos);
     		}
     	}
@@ -242,15 +370,20 @@ bool roadWin(Board& board,int p){
     return false;
 }
 
-double evaluate(Board& board){
-	double result = 0.0;
+
+float evaluate(Board& board){
+	float result = 0.0;
 	int pos=0,next_pos,points;
 	int n = 0;
 
 	if(roadWin(board,0)){
+		cerr<<"herherhehrehrehrehrerererer21321321321321321321321321321321321321ere"<<endl;
+		board.forcePrintBoard();
 		result = INT_MAX;
 		return result;
 	}else if(roadWin(board,1)){
+		cerr<<"herherhehrehrehrehrererererere"<<endl;
+		board.forcePrintBoard();
 		result = INT_MIN;
 		return result;
 	}
@@ -258,6 +391,7 @@ double evaluate(Board& board){
 	for(int i=0;i<22;i++){
 		f[i] = 0;
 	}
+
 
 	char dir[4] = {'+','-','>','<'};
 	int next[4] = {1,-1,board.size,-board.size};
@@ -401,7 +535,6 @@ double evaluate(Board& board){
 			max_length = max(max_length,longestChain(board,pos,0,visited));		//longestChain(board,position,player,visited)
 		}	
 	}
-
 	visited.clear();
 	f[14] = max_length;
 
@@ -413,7 +546,6 @@ double evaluate(Board& board){
 			max_length = max(max_length,longestChain(board,pos,1,visited));		//longestChain(board,length,position,player)
 		}	
 	}
-
 	f[15] = max_length;				//w[11] -> maxlength opp
 	
 	//Controlling bigger stacks
@@ -427,10 +559,10 @@ double evaluate(Board& board){
         		num_owned_me = countStackElements(board,0,pos);
         		num_owned_opp = countStackElements(board,1,pos);
         		if(board.b[pos].back().color == board.player_color[0]){				//f[12] =  stacks owned by me
-        			f[16] += (stack_size+1) * (num_owned_me+1);// - num_owned_opp/4);
+        			f[16] += (stack_size+1) * (num_owned_me - num_owned_opp/4);
 
         		}else{
-        			f[17] += (stack_size+1) * (num_owned_opp+1); //- num_owned_me/4);			//f[12] =  stacks owned by opponent
+        			f[17] += (stack_size+1) * (-num_owned_me/4 + num_owned_opp);			//f[12] =  stacks owned by opponent
         		}
         	}
         }
@@ -442,6 +574,21 @@ double evaluate(Board& board){
 		result += w[i]*f[i];	
 	}
 
+	
+	
+	
+	// cerr<<"Evaluation Started#############"<<endl;
+
+	// result += weightedTopStoneCount(board);
+	// result += board.p_flats[1] - board.p_flats[0];
+	// cerr<<" Part22222: Evaluation Started#############"<<endl;
+	// result += weightedStackSum(board);
+	// cerr<<" Part233333: Evaluation Started#############"<<endl;
+	// result += getMaxChainLengthDiff(board);
+	// cerr<<" DONE Evaluation #############"<<endl;
+	// for (int i = 1; i < num_players; ++i){
+		// result -= (this.getStackHeight(i)+this.getOwnedSquares(i)+this.getMaxChainLength(i));
+	// }
     return result;
 }
 
@@ -597,24 +744,17 @@ vector<string> generateMoves(Board& board,int player){
 	return all_moves;
 }
 
-string minMove(int p,Board board, double alpha, double beta, int level){
+string minMove(int p,Board board, float& alpha, float& beta, int level){
 	
 	// cerr<<"Doing a MIN move at level: "<<level<<endl;
 	if(level>=cut_off){
-		double heuristic = evaluate(board);
+		float heuristic = evaluate(board);
 		// cerr<<"Heuristic: "<<cost<<endl;
 		// return cost;
-        string ret = to_string(heuristic)+"#";
-		return ret;
+		return to_string(heuristic)+"#";
 	}
 
-    if(roadWin(board,1)){
-        double heuristic = INT_MIN;
-        string ret = to_string(heuristic)+"#";
-        return ret;
-    }
-
-	double value = INT_MAX;
+	float value = INT_MAX;
 
 	// FOR ACTIONS
 	string starred_move = "";
@@ -622,18 +762,27 @@ string minMove(int p,Board board, double alpha, double beta, int level){
 	string s = "";
 	Board board_try = board; 
 
-	double maxi = 0;
+	float maxi = 0;
 	vector<string> moves = generateMoves(board_try,p);
 	string cmd;
 
 
-	
+	// board_try.printBoard();
+	// cerr<<"All available moves are FOR MIN MOVE AT level: "<<level<<" |  :  ";
+	// for (int i = 0; i < moves.size(); ++i){
+	// 	cerr<<moves[i]<<", ";
+	// }
+	// cerr<<endl;
 
 	for (int i = 0; i < moves.size(); ++i){
 		cmd = moves[i];
 		board_try = board;
-	
-    	if(cmd[0] == 'F' || cmd[0] == 'S' || cmd[0] == 'C'){
+		// cerr<<"################"<<endl;
+		// board_try.printBoard();
+		// cerr<<"MIN move at level: "<<level<<" : cmd: "<<cmd<<endl;
+		// cerr<<"MIN: Move: "<<cmd<<endl;
+		// board_try.printBoard();
+		if(cmd[0] == 'F' || cmd[0] == 'S' || cmd[0] == 'C'){
 			placePiece(p,cmd,board_try);
 		}else{
 			moveStack(cmd,board_try);
@@ -650,30 +799,21 @@ string minMove(int p,Board board, double alpha, double beta, int level){
 		if(alpha >= value){return (to_string(value)+"#"+starred_move);}
 		beta = min(beta,value);
 	}
-	
+	// return value;
 	return (to_string(value)+"#"+starred_move);
 }
 
 
-string maxMove(int p,Board board, double alpha, double beta, int level){
+string maxMove(int p,Board board, float& alpha, float& beta, int level){
 	
-
 	
 	if(level>=cut_off){
-        double heuristic = evaluate(board);
-        // cerr<<"Heuristic: "<<cost<<endl;
-        // return cost;
-        string ret = to_string(heuristic)+"#";
-        return ret;
-    }
-    
-    if(roadWin(board,0)){
-        double heuristic = INT_MAX;
-        string ret = to_string(heuristic)+"#";
-        return ret;
-    }
+		float heuristic = evaluate(board);
+		// cerr<<"Heuristic: "<<cost<<endl;
+		return to_string(heuristic)+"#";
+	}
 
-	double value = INT_MIN;
+	float value = INT_MIN;
 
 	// FOR ACTIONS
 	string starred_move = "";
@@ -682,21 +822,25 @@ string maxMove(int p,Board board, double alpha, double beta, int level){
 
 	Board board_try = board; 	
 
-	double mini = 0;
+	float mini = 0;
 	vector<string> moves = generateMoves(board_try,p);
 	string cmd;
-    // if(level == 0){
-    //     cerr<<"All available moves are: ";
-    //     for (int i = 0; i < moves.size(); ++i){
-    //      cerr<<moves[i]<<", ";
-    //     }
-    //     cerr<<endl;
-    // }
+
+	// board_try.printBoard();
+	// cerr<<"All available moves are FOR MAXXXXX MOVE AT level: "<<level<<" |  :  ";
+	// for (int i = 0; i < moves.size(); ++i){
+	// 	cerr<<moves[i]<<", ";
+	// }
+	// cerr<<endl;
 
 	for (int i = 0; i < moves.size(); ++i){
 		cmd = moves[i];
 		board_try = board;
-
+		// cerr<<"################"<<endl;
+		// board_try.printBoard();
+		// cerr<<"Tyring MAX move at level: "<<level<<" : cmd: "<<cmd<<endl;
+		// cerr<<"MAXAX: Move: "<<cmd<<endl;
+		// board_try.printBoard();
 		if(cmd[0] == 'F' || cmd[0] == 'S' || cmd[0] == 'C'){
 			placePiece(p,cmd,board_try);
 		}else{
@@ -721,24 +865,24 @@ string maxMove(int p,Board board, double alpha, double beta, int level){
 
 string doMove(Board& board,int level){
 
-	if(moves_me < 4) {
-		cut_off = 3;
-	}
-	else {
-		if(time_left >= 100){
-            cut_off = 5;
-        }else if(time_left >= 80){
-	 		cut_off = 4;
-	 	}else if(time_left >= 57){
-	 		cut_off = 3;
-	 	}
-	 	else if(time_left >= 15) {
-	 		cut_off = 2;
-	 	}
-	 	else{
-	 		cut_off = 1;
-	 	}
-	 }
+	// if(moves_me <= 5) {
+	// 	cut_off = 2;
+	// }
+	// else {
+		
+		
+	//  	if(time_left >= 80){
+	//  		cut_off = 4;
+	//  	}else if(time_left >= 45){
+	//  		cut_off = 3;
+	//  	}
+	//  	else if(time_left >= 15) {
+	//  		cut_off = 2;
+	//  	}
+	//  	else{
+	//  		cut_off = 1;
+	//  	}
+	//  }
 
 	// cerr<<"#############Planning a Move#############"<<endl;
 	string cmd;
@@ -750,34 +894,41 @@ string doMove(Board& board,int level){
 		}else{
 			cmd="Fe1";
 		}
-		// cerr<<"First opp piece placed: "<<cmd<<endl;
+		cerr<<"First opp piece placed: "<<cmd<<endl;
 		placePiece(player,cmd,board);		
         board.printBoard();	
         moves_me ++;
         return cmd;
 	}
-	double alpha = INT_MIN;
-	double beta = INT_MAX;
+	float alpha = INT_MIN;
+	float beta = INT_MAX;
 	string action;
 	
 	
 	
-	
+	// time_t move_start = time(0);
 	
 	action = maxMove(player,board,alpha,beta,level);				// maxMove(player,board,alpha,beta,level)	
 
-	double value = 0;
+	// time_t move_end = time(0);
+	// time_passed += difftime(move_end, move_start);
+
+	// time_left = time_limit - float( clock () - begin_time ) /  CLOCKS_PER_SEC;
+	// cerr<<"Time Left: "<<time_left<<endl;
+	
+
+	float value = 0;
 	action = parseMove(action,value);
 	
 	cmd = action;
-	// cerr<<"My Move: "<<cmd<<endl;	
+	cerr<<"My Move: "<<cmd<<endl;	
 	
 	if(cmd[0] =='F' || cmd[0] =='S' || cmd[0] == 'C'){				//means that opponent has played a "place a stone"
         placePiece(player,cmd,board);		
-        // board.printBoard();	
+        board.printBoard();	
     }else{									
    		moveStack(cmd,board);				
-        // board.printBoard();
+        board.printBoard();
     }
 	
 	
@@ -787,16 +938,24 @@ string doMove(Board& board,int level){
 
 int main(){
 
-	initialise();
-
+    initialise();
+    board.b[0].push_back(BoardUnit(1,1));
+    board.b[1].push_back(BoardUnit(1,1));
+    board.b[9].push_back(BoardUnit(1,3));
+    board.b[3].push_back(BoardUnit(1,1));
+    board.b[4].push_back(BoardUnit(1,3));
+    board.b[5].push_back(BoardUnit(1,3));
+    board.printBoard();
+    cerr<<roadWin(board,1);
+/*
+	// clock_t time_move_start = clock();
 	time_t time_move_start = time(0);
-	double time_move;
-
+	float time_move;
 	// Game Loop 
 	string cmd;
 	if(board.player_color[0] == 1){			// if i am player 1 i do a move
 		cmd = doMove(board,0);		
-		// time_move = double(clock() - time_move_start)/CLOCKS_PER_SEC;
+		// time_move = float(clock() - time_move_start)/CLOCKS_PER_SEC;
 		time_move = difftime(time(0),time_move_start);
 		time_left -= time_move;
 		cerr<<"time lefttttt:  "<<time_left<<endl;
@@ -817,27 +976,27 @@ int main(){
 		}else{
 			player=1;
 		}
-		// cerr<<"Opponent's Move: "<<cmd<<endl;		
+		cerr<<"Opponent's Move: "<<cmd<<endl;		
         if(cmd[0] =='F' || cmd[0]=='S' || cmd[0] =='C'){				//means that opponent has played a "place a stone"
             placePiece(player,cmd,board);		//1 -> opponent		// placepiece(player,cmd,board)
-            // board.printBoard();	
+            board.printBoard();	
         }
         else{										//means that opp has played "move a stack", assuming the correct format of input here
        		moveStack(cmd,board);					// moveStack(cmd,board)
-            // board.printBoard();
+            board.printBoard();
         }
         moves_opp++;
 
 
         
 		cmd = doMove(board,0);	
-		// time_move = double(clock() - time_move_start) / CLOCKS_PER_SEC;
+		// time_move = float(clock() - time_move_start) / CLOCKS_PER_SEC;
 		time_move = difftime(time(0),time_move_start);
 		time_left -= time_move;
 		cerr<<"time LEFTTTTT:::: "<<time_left<<endl; 
 		cout<<cmd<<endl;	
 
 	}
-
+*/
 	return 0;
 }
