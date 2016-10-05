@@ -16,12 +16,14 @@ public:
 	int p_caps[2]; 	//= {0};
 	int init_flats;
 	bool debug;
+	int area;
 
 public:
 	Board();
 	Board(int bsize,int player_me);
 	void addPiece(int pos, BoardUnit bu);
 	void printBoard();
+	void forcePrintBoard();
 	~Board();
 	/* data */
 };
